@@ -13,6 +13,7 @@ https://forge.nemo-ocean.eu/nemo to obtain the official NEMO code.
 
 Simply copy all the `*.F90` and `*.h90` files found into `nemo_4.2/MY_SRC/` into
 the `MY_SRC` directory of the NEMO configuration you wish to run (*i.e.* under
-`<NEMO_REPO>/cfgs/<NEMO_CONFIG>/MY_SRC/`).  Then compile as usual, the sources
+`<NEMO_REPO>/cfgs/<NEMO_CONFIG>/MY_SRC/`).  Then, compile NEMO as usual, the sources
 found in the `MY_SRC` will overwrite those of the NEMO version you use.
 
+L. Brodeau, January 2024
