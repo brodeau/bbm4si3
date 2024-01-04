@@ -1,0 +1,25 @@
+            !
+            DO_2D( nn_hls-1, nn_hls-1, nn_hls-1, nn_hls-1 )
+                  !
+                  zU   = Uv_sub(ji,jj)  ! U at v-points!
+                  zV   = Vv_sub(ji,jj)  ! V at v-points!
+                  zMdt =  zmV_t(ji,jj)  ! M/dt
+                  zUo  =  uVoce(ji,jj)  ! u ocean current at v-points!
+                  !
+                  !                 !--- tau_io/(u_oce - zU)
+                  zt1   = zU - zUo
+                  zt2   = zV - v_oce(ji,jj)
+                  zTauO = zAv(ji,jj) * zrhoco * SQRT( zt1*zt1 + zt2*zt2 )  ! MIND: the actual stress is `zTauO * (zU - zUo)` !!!
+                  !
+                  !                 !--- Coriolis at Uv-points (no interpolation needed here)
+                  zCorio =   zMdt*zdtbbm * 2._wp*omega*SIN( rad*gphiv(ji,jj) ) * zV  !`zMdt*zdtbbm` => get mass, not mass*dt !
+                  !
+                  !                 !--- Sum of external forces (explicit solution) = F + tau_ia + Coriolis + spg + tau_io
+                  zRHS = zfUv(ji,jj) + ztauxVai(ji,jj) + zCorio + zspgUv(ji,jj) + zTauO*zUo        ! unit is [Pa] = [kg.m-1.s-2]
+                  !
+                  Uv_sub(ji,jj) = ( (          ( zMdt * zU + zRHS )                                &
+                     &                                      / MAX( zepsi, zMdt + zTauO )           &
+                     &             ) * zmsk01y(ji,jj) + zUo * 0.01_wp * ( 1._wp - zmsk01y(ji,jj) ) &
+                     &           )   * zmsk00y(ji,jj)
+            END_2D
+            !

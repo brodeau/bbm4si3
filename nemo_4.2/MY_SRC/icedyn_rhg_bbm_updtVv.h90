@@ -1,0 +1,26 @@
+            !
+            DO_2D( nn_hls-1, nn_hls-1, nn_hls-1, nn_hls-1 )
+                  !
+                  zV   = Vv_sub(ji,jj)  ! V at v-points!
+                  zU   = Uv_sub(ji,jj)  ! U at v-points!
+                  zMdt =  zmV_t(ji,jj)  ! M/dt
+                  zVo  =  v_oce(ji,jj)  ! v ocean current at v-points!
+                  !
+                  !                 !--- tau_io/(v_oce - zV)
+                  zt1   = zV - zVo
+                  zt2   = zU - uVoce(ji,jj)
+                  zTauO = zAv(ji,jj) * zrhoco * SQRT( zt1*zt1 + zt2*zt2 )  ! MIND: the actual stress is `zTauO * (zV - zVo)` !!!
+                  !
+                  !                 !--- Coriolis at Vv-points (no interpolation needed here)
+                  zCorio = - zMdt*zdtbbm * 2._wp*omega*SIN( rad*gphiv(ji,jj) ) * zU  !`zMdt*zdtbbm` => get mass, not mass*dt !
+                  !
+                  !                 !--- Sum of external forces (explicit solution) = F + tau_ia + Coriolis + spg + tau_io
+                  zRHS = zfVv(ji,jj) + ztauy_ai(ji,jj) + zCorio + zspgVv(ji,jj) + zTauO*zVo        ! unit is [Pa] = [kg.m-1.s-2]
+                  !
+                  Vv_sub(ji,jj) = ( (          ( zMdt * zV + zRHS )                                &
+                     &                                      / MAX( zepsi, zMdt + zTauO )           &
+                     &             ) * zmsk01y(ji,jj) + zVo * 0.01_wp * ( 1._wp - zmsk01y(ji,jj) ) &
+                     &           )   * zmsk00y(ji,jj)
+            END_2D
+            !
+            IF( ln_bdy )   CALL bdy_ice_dyn( 'V' )
