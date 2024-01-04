@@ -1,4 +1,4 @@
-<!-- [![DOI](https://zenodo.org/badge/<ID>.svg)](https://zenodo.org/badge/latestdoi/<ID>) -->
+[![DOI](https://zenodo.org/badge/738921416.svg)](https://zenodo.org/badge/latestdoi/738921416)
 
 # bbm4si3
 
