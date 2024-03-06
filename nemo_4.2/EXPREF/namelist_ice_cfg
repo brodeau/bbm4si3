@@ -77,11 +77,7 @@
       !                               !        = 3 advection of damage + stress tensor components + consider "upper-convected time" terms (tensor advection)
       !                               !            at big time step
       !                               !
-      rn_crndg      = 2.              ! Cross-Nudging coefficient
-      ln_boost_CN_coast = .false.     !  =>  ff true, boosts the CN at the coastline
-      rn_max_CN_coast   =    5.       !  =>  maximum value the CN coefficient should reach at the coast
-      ln_boost_CN_high_dmg = .false.  !  =>  if true, boosts the CN where damage is high
-      rn_max_CN_dmg     =    2.5      !  =>   maximum value the CN coefficient should reach when boost is needed
+      rn_crndg      = 0.01   !1/4 deg ! Cross-Nudging coefficient [s**-1]
       !                               !
       rn_dmg_max     = 0.9999999      !     upper-bound value to cap the damage to ! (~ 1 - eps )
       rn_C0          = -20.           ! compaction parameter "C" (Hibler's exponential)                              =  -20.
