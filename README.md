@@ -18,4 +18,7 @@ the `MY_SRC` directory of the NEMO configuration you wish to run (*i.e.* under
 `<NEMO_REPO>/cfgs/<NEMO_CONFIG>/MY_SRC/`).  Then, compile NEMO as usual, the sources
 found in the `MY_SRC` will overwrite those of the NEMO version you are using.
 
+
+No-slip conditions must be used at the coast! Not only for SI3 but also for OPA !!!
+
 L. Brodeau, January 2024
