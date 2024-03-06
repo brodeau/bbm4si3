@@ -108,8 +108,8 @@ CONTAINS
       IF( ln_rhg_BBM ) THEN
          IF( iom_use('iceconcf') ) CALL iom_put( 'iceconcf', a_f(:,:)         )          ! ice concentration @F #dmg
          IF( iom_use('icethicf') ) CALL iom_put( 'icethicf', h_f(:,:)         )          ! ice thickness     @F #dmg
-         IF( iom_use('icedmgt' ) ) CALL iom_put( 'icedmgt', dmgt        * zmsk00 )          ! ice damage @T !#dmg
-         IF( iom_use('icedmgf' ) ) CALL iom_put( 'icedmgf', dmgf                 )          ! ice damage @T !#dmg
+         IF( iom_use('icedmgt' ) ) CALL iom_put( 'icedmgt', dmgt*xmsk_ice_t   )          ! ice damage @T !#dmg
+         IF( iom_use('icedmgf' ) ) CALL iom_put( 'icedmgf', dmgf*xmsk_ice_f   )          ! ice damage @T !#dmg
       END IF
       IF( iom_use('icehnew' ) )   CALL iom_put( 'icehnew', ht_i_new             )                                           ! new ice thickness formed in the leads
       IF( iom_use('snwvolu' ) )   CALL iom_put( 'snwvolu', vt_s        * zmsksn )                                           ! snow volume
@@ -169,7 +169,7 @@ CONTAINS
                z2d(ji,jj) = 0.5_wp * SQRT( z2da * z2da + z2db * z2db )
             END_2D
             CALL lbc_lnk( 'icewri',  z2d, 'F', 1.0_wp )
-            CALL iom_put( 'icevelf', z2d )
+            CALL iom_put( 'icevelf', z2d*xmsk_ice_f )
          ENDIF
       ENDIF
       !

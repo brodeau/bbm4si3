@@ -171,11 +171,12 @@ MODULE ice
    INTEGER , PUBLIC ::   nn_vp_chkcvg     !: Number of iterations every each convergence is checked
    !
    ! #bbm:
+   LOGICAL,  PUBLIC ::   ln_MEB           !: use the MEB rheology (Dansereau et al., 2016) rather than strictly BBM
    INTEGER , PUBLIC ::   nn_nbbm          !: number of iterations for subcycling !#bbm
    REAL(wp), PUBLIC ::   rn_Nref          !: Maximum compressive stress at the reference scale [Pa] / neXtSIM => `compr_strength`
-   REAL(wp), PUBLIC ::   rn_P0            !: Compression factor "P" at play in P_max, in Eq.8 of [Olason al.2022]
+   REAL(wp), PUBLIC ::   rn_P0            !: Compression factor "P" at play in P_max, in Eq.8 of [Olason al.2022], useless when `ln_MEB=.true.`
    REAL(wp), PUBLIC ::   rn_E0            !: Elasticity of undamaged ice [Pa]
-   REAL(wp), PUBLIC ::   rn_mu0           !: Viscosity of Undamaged ice [Pa.s]
+   REAL(wp), PUBLIC ::   rn_eta0          !: Viscosity of Undamaged ice [Pa.s]
    REAL(wp), PUBLIC ::   rn_kth           !: healing constant [Eq.30 of Olason et al.,2022]
    INTEGER , PUBLIC ::   nn_d_adv         !: advection of damage @T & @F: none (0); at big time step (1); stress tensor as well (>1)
    !
@@ -388,11 +389,12 @@ MODULE ice
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   u_ice, v_ice  !: components of the ice velocity                          (m/s)
    !#bbm:
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   xmskt, xmskf  !: ! effective land-sea masks at T- and F-poins
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   xmsk_ice_t, xmsk_ice_f !: mask for presence of ice
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   uVice, vUice  !: components of the ice velocity in F-centric formalism   (m/s)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   utauVice, vtauUice !: atmos-ice stress. comp. in F-centric formalism     (N/m2)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   dmgt, dmgf    !: ice damage / #bbm
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   sgm11t, sgm22t, sgm12t   !: components of internal stress tensor at T-points / #bbm
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   sgm11f, sgm22f, sgm12f   !: components of internal stress tensor at F-points / #bbm
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   sgm11t, sgm22t, sgm12t !: components of internal stress tensor at T-points / #bbm
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   sgm11f, sgm22f, sgm12f !: components of internal stress tensor at F-points / #bbm
    !#bbm.
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   vt_i , vt_s   !: ice and snow total volume per unit area                 (m)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   st_i          !: Total ice salinity content                              (pss.m)
@@ -593,7 +595,9 @@ CONTAINS
       ! * damage tracers, and components of internal stress tensor at both T- and F-points:
       IF( ln_damage ) THEN
          ii = ii + 1
-         ALLOCATE(  xmskt(jpi,jpj) ,  xmskf(jpi,jpj) ,   dmgt(jpi,jpj) , dmgf(jpi,jpj) , &
+         ALLOCATE(  xmskt(jpi,jpj) , xmskf(jpi,jpj) ,   &
+            &      xmsk_ice_t(jpi,jpj) , xmsk_ice_f(jpi,jpj) ,   &
+            &        dmgt(jpi,jpj) ,  dmgf(jpi,jpj) ,   &
             &      sgm11t(jpi,jpj) , sgm22t(jpi,jpj) , sgm12t(jpi,jpj) , &
             &      sgm11f(jpi,jpj) , sgm22f(jpi,jpj) , sgm12f(jpi,jpj) , &
             &      STAT = ierr(ii) )

@@ -1,0 +1,85 @@
+<?xml version="1.0"?>
+
+<!--
+============================================================================================================
+=                                           output files definition                                        =
+=                                            Define your own filesfor ocean dynamics context               =
+=                                         put the variables you want...                                    =
+============================================================================================================
+-->
+
+<file_definition type="one_file" name="/lus/scratch/CT1/hmg2840/brodeau/NANUK4/NANUK4_ICE-BBM2400-S/00012721-00038280/@expname@_@freq@_@startdate@_@enddate@" sync_freq="1d" min_digits="4">
+
+  <file_group id="1d" output_freq="1d"  output_level="10" enabled=".TRUE.">  <!-- 1d files -->
+
+
+    <file id="file11" name_suffix="_grid_T" description="ocean T grid variables" >
+      <field field_ref="toce"         name="thetao"                                                                      operation="instant" freq_op="1d" > @toce_e3t / @e3t </field>
+      <field field_ref="soce"         name="so"                                                                          operation="instant" freq_op="1d" > @soce_e3t / @e3t </field>
+      <field field_ref="sst"          name="tos"   />
+      <field field_ref="sss"          name="sos"   />
+      <field field_ref="ssh"          name="zos"   />
+      <field field_ref="mldr10_1" />
+      <field field_ref="empmr"        name="wfo"      />
+      <field field_ref="qsr_oce"      name="qsr_oce"  />
+      <field field_ref="qns_oce"      name="qns_oce"  />
+      <field field_ref="qt_oce"       name="qt_oce"   />
+      <field field_ref="saltflx"      name="sfx"      />
+      <field field_ref="taum"         name="taum"     />
+      <field field_ref="rho_air"      name="rho_air"  />
+      <field field_ref="wspd"         name="windsp"   />
+      <field field_ref="wnd_x"        name="wnd_x"   />
+      <field field_ref="wnd_y"        name="wnd_y"   />
+      <field field_ref="precip"       name="precip"   />
+      <field field_ref="ahmt_2d" />
+      <!-- ice and snow -->
+      <field field_ref="snowpre" />
+    </file>
+
+    <file id="file12" name_suffix="_grid_U" description="ocean U grid variables" >
+      <field field_ref="ssu"          name="uos"      />
+      <field field_ref="uoce"         name="uo"       operation="instant" freq_op="1d" > @uoce_e3u / @e3u </field>
+      <field field_ref="utau"         name="tauuo"    />
+    </file>
+
+    <file id="file13" name_suffix="_grid_V" description="ocean V grid variables" >
+      <field field_ref="ssv"          name="vos"      />
+      <field field_ref="voce"         name="vo"       operation="instant" freq_op="1d" > @voce_e3v / @e3v </field>
+      <field field_ref="vtau"         name="tauvo"    />
+    </file>
+
+    <file id="file14" name_suffix="_grid_W" description="ocean W grid variables"  enabled=".FALSE.">
+      <field field_ref="e3w" />
+      <field field_ref="woce"         name="wo"       />
+      <field field_ref="avt"          name="difvho"   />
+      <field field_ref="w_masstr"     name="vovematr" />
+      <!-- variables available with ln_zdfiwm =T -->
+      <field field_ref="av_wave"      name="av_wave"    />
+      <field field_ref="bn2"          name="bn2"        />
+      <field field_ref="bflx_iwm"     name="bflx_iwm"   />
+      <field field_ref="pcmap_iwm"    name="pcmap_iwm"  />
+      <field field_ref="emix_iwm"     name="emix_iwm"   />
+      <field field_ref="av_ratio"     name="av_ratio"   />
+    </file>
+
+    <file id="file15" name_suffix="_scalar" description="scalar variables"  enabled=".FALSE.">
+      <!-- global drifts (conservation checks) -->
+      <field field_ref="bgtemper"     name="bgtemper"    />
+      <field field_ref="bgsaline"     name="bgsaline"    />
+      <field field_ref="bgheatco"     name="bgheatco"    />
+      <field field_ref="bgheatfx"     name="bgheatfx"    />
+      <field field_ref="bgsaltco"     name="bgsaltco"    />
+      <field field_ref="bgvolssh"     name="bgvolssh"    />
+      <field field_ref="bgvole3t"     name="bgvole3t"    />
+
+      <!-- global surface forcings  -->
+      <field field_ref="bgfrcvol"     name="bgfrcvol"    />
+      <field field_ref="bgfrctem"     name="bgfrctem"    />
+      <field field_ref="bgfrchfx"     name="bgfrchfx"    />
+      <field field_ref="bgfrcsal"     name="bgfrcsal"    />
+
+    </file>
+
+  </file_group>
+
+</file_definition>

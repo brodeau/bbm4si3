@@ -26,6 +26,8 @@ MODULE icedyn_adv
    USE icedyn_adv_pra_bbm_t ! sea-ice: advection scheme (Prather) @T for `damage and stresses`  !bbm
    USE icedyn_adv_pra_bbm_f ! sea-ice: advection scheme (Prather) @F for `damage and stresses`  !bbm
    !
+   USE icedyn_rhg_util, ONLY : cap_damage
+   !
    USE icectl         ! sea-ice: control prints
    !
    USE in_out_manager ! I/O manager
@@ -171,11 +173,12 @@ CONTAINS
             ENDIF
             !
             ! Fall back after advection:
-            dmgt   = (1._wp - zdmg_pos)                 * xmskt
-            sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt
+            dmgt   = (1._wp - zdmg_pos)
+            CALL cap_damage( 'T', 'ice_dyn_adv', dmgt )
+            sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt            
             sgm22t = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt
-            sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt
-            !
+            sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt            
+            
 
             !! Advect at F points with u@V, v@U velocities
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -205,7 +208,8 @@ CONTAINS
             ENDIF
 
             ! Fall back after advection:
-            dmgf   = (1._wp - zdmg_pos)                 * xmskf
+            dmgf   = (1._wp - zdmg_pos)
+            CALL cap_damage( 'F', 'ice_dyn_adv', dmgf )
             sgm11f = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf
             sgm22f = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf
             sgm12f = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf

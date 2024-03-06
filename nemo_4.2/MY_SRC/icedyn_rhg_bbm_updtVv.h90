@@ -23,4 +23,3 @@
                      &           )   * zmsk00y(ji,jj)
             END_2D
             !
-            IF( ln_bdy )   CALL bdy_ice_dyn( 'V' )

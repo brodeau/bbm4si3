@@ -30,8 +30,6 @@ MODULE icedyn_adv_pra_bbm_t
    USE lib_fortran    ! fortran utilities (glob_sum + no signed zero)
    USE lbclnk         ! lateral boundary conditions (or mpp links)
 
-   USE icedyn_rhg_util, ONLY : cap_damage
-
    IMPLICIT NONE
    PRIVATE
 
@@ -39,7 +37,7 @@ MODULE icedyn_adv_pra_bbm_t
    PUBLIC   adv_pra_t_d_init      ! called by icedyn_adv
 
    ! Moments for advection
-   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdmg, sydmg, sxxdmg, syydmg, sxydmg   ! ice damage
+   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sx1md, sy1md, sxx1md, syy1md, sxy1md   ! ice damage
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd1, sydd1, sxxdd1, syydd1, sxydd1   ! ice damage
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd2, sydd2, sxxdd2, syydd2, sxydd2   ! ice damage
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd3, sydd3, sxxdd3, syydd3, sxydd3   ! ice damage
@@ -53,7 +51,7 @@ MODULE icedyn_adv_pra_bbm_t
    !!----------------------------------------------------------------------
 CONTAINS
 
-   SUBROUTINE ice_dyn_adv_pra_t_d( kt, pu_ice, pv_ice,  pdmg, pdd1, pdd2, pdd3 )
+   SUBROUTINE ice_dyn_adv_pra_t_d( kt, pu_ice, pv_ice,  p1md, pdd1, pdd2, pdd3 )
       !!----------------------------------------------------------------------
       !!                **  routine ice_dyn_adv_pra_t_d  **
       !!
@@ -70,7 +68,7 @@ CONTAINS
       INTEGER,                            INTENT(in   ) :: kt         ! current time step
       REAL(wp), DIMENSION(:,:),           INTENT(in   ) :: pu_ice     ! ice i-velocity
       REAL(wp), DIMENSION(:,:),           INTENT(in   ) :: pv_ice     ! ice j-velocity
-      REAL(wp), DIMENSION(:,:),           INTENT(inout) :: pdmg       ! (1 - damage) @ T
+      REAL(wp), DIMENSION(:,:),           INTENT(inout) :: p1md       ! (1 - damage) @ T
       REAL(wp), DIMENSION(:,:), OPTIONAL, INTENT(inout) :: pdd1, pdd2, pdd3 ! stresses @ T
       !
       LOGICAL  :: l_advect_sigma = .FALSE.
@@ -119,7 +117,7 @@ CONTAINS
          zarea(:,:) = e1e2t(:,:)
 
          ! --- transported fields --- !
-         z0di (:,:) = pdmg (:,:) * zarea(:,:)        ! Damage content !#bbm
+         z0di (:,:) = p1md (:,:) * zarea(:,:)        ! Damage content !#bbm
          IF(l_advect_sigma) THEN
             z0d1 (:,:) = pdd1 (:,:) * zarea(:,:)        ! Damage content !#bbm
             z0d2 (:,:) = pdd2 (:,:) * zarea(:,:)        ! Damage content !#bbm
@@ -130,8 +128,8 @@ CONTAINS
          !                                                                  !--------------------------------------------!
          IF( MOD( (kt - 1) / nn_fsbc , 2 ) ==  MOD( (jt - 1) , 2 ) ) THEN   !==  odd ice time step:  adv_x then adv_y  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0di  , sxdmg , sxxdmg , sydmg , syydmg , sxydmg )
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0di  , sxdmg , sxxdmg , sydmg , syydmg , sxydmg )
+            CALL adv_x( zdt , zudy , 1._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
+            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
             IF(l_advect_sigma) THEN
                CALL adv_x( zdt , zudy , 1._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
                CALL adv_y( zdt , zvdx , 0._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
@@ -145,8 +143,8 @@ CONTAINS
             !                                                               !--------------------------------------------!
          ELSE                                                               !== even ice time step:  adv_y then adv_x  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0di  , sxdmg , sxxdmg , sydmg , syydmg , sxydmg )
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0di  , sxdmg , sxxdmg , sydmg , syydmg , sxydmg )
+            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
+            CALL adv_x( zdt , zudy , 0._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
             IF(l_advect_sigma) THEN
                CALL adv_y( zdt , zvdx , 1._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
                CALL adv_x( zdt , zudy , 0._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
@@ -161,8 +159,8 @@ CONTAINS
          ! --- Lateral boundary conditions --- !
          !     caution: for gradients (sx and sy) the sign changes
          IF(l_advect_sigma) THEN
-            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sxdmg , cgrt, -1._wp, sydmg , cgrt, -1._wp  &
-               &                , sxxdmg, cgrt, 1._wp, syydmg, cgrt,  1._wp, sxydmg, cgrt,  1._wp  &
+            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
+               &                , sxx1md, cgrt, 1._wp, syy1md, cgrt,  1._wp, sxy1md, cgrt,  1._wp  &
                &                ,   z0d1, cgrt, 1._wp, sxdd1 , cgrt, -1._wp, sydd1 , cgrt, -1._wp  &
                &                , sxxdd1, cgrt, 1._wp, syydd1, cgrt,  1._wp, sxydd1, cgrt,  1._wp  &
                &                ,   z0d2, cgrt, 1._wp, sxdd2 , cgrt, -1._wp, sydd2 , cgrt, -1._wp  &
@@ -170,22 +168,20 @@ CONTAINS
                &                ,   z0d3, cgrt, 1._wp, sxdd3 , cgrt, -1._wp, sydd3 , cgrt, -1._wp  &
                &                , sxxdd3, cgrt, 1._wp, syydd3, cgrt,  1._wp, sxydd3, cgrt,  1._wp  )
          ELSE
-            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sxdmg , cgrt, -1._wp, sydmg , cgrt, -1._wp  &
-               &                , sxxdmg, cgrt, 1._wp, syydmg, cgrt,  1._wp, sxydmg, cgrt,  1._wp  )            
+            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
+               &                , sxx1md, cgrt, 1._wp, syy1md, cgrt,  1._wp, sxy1md, cgrt,  1._wp  )            
          ENDIF
          
          ! --- Recover the properties from their contents --- !
          zarea(:,:) = r1_e1e2t(:,:) * xmskt(:,:)
-         pdmg (:,:) = z0di (:,:) * zarea(:,:) !#bbm
+         p1md (:,:) = z0di (:,:) * zarea(:,:) !#bbm
          IF(l_advect_sigma) THEN
             pdd1 (:,:) = z0d1 (:,:) * zarea(:,:) !#bbm
             pdd2 (:,:) = z0d2 (:,:) * zarea(:,:) !#bbm
             pdd3 (:,:) = z0d3 (:,:) * zarea(:,:) !#bbm
          END IF
          
-         pdmg(:,:) = MIN( MAX( pdmg(:,:), 1._wp - rn_dmg_max ) , 1._wp ) !! `pdmg` is `1-damage` !!!
-         
-         !CALL cap_damage( kt, -1, cgrt, crtnnm//'()', pdmg )
+         p1md(:,:) = MIN( MAX( p1md(:,:), 1._wp - rn_dmg_max ) , 1._wp ) !! `p1md` is `1-damage` !!!
 
       END DO !DO jt = 1, icycle
       !
@@ -599,13 +595,13 @@ CONTAINS
       !!-------------------------------------------------------------------
 
       !                             !* allocate prather fields
-      ALLOCATE( sxdmg(jpi,jpj), sydmg(jpi,jpj), sxxdmg(jpi,jpj), syydmg(jpi,jpj), sxydmg(jpi,jpj) , &
+      ALLOCATE( sx1md(jpi,jpj), sy1md(jpi,jpj), sxx1md(jpi,jpj), syy1md(jpi,jpj), sxy1md(jpi,jpj) , &
          &      sxdd1(jpi,jpj), sydd1(jpi,jpj), sxxdd1(jpi,jpj), syydd1(jpi,jpj), sxydd1(jpi,jpj) , &
          &      sxdd2(jpi,jpj), sydd2(jpi,jpj), sxxdd2(jpi,jpj), syydd2(jpi,jpj), sxydd2(jpi,jpj) , &
          &      sxdd3(jpi,jpj), sydd3(jpi,jpj), sxxdd3(jpi,jpj), syydd3(jpi,jpj), sxydd3(jpi,jpj) , &
          &      STAT = ierr )
       CALL mpp_sum( crtnnm, ierr )
-      IF( ierr /= 0 )   CALL ctl_stop('STOP', crtnnm//' : unable to allocate dmg array for Prather advection scheme')
+      IF( ierr /= 0 )   CALL ctl_stop('STOP', crtnnm//' : unable to allocate 1md array for Prather advection scheme')
       !
       CALL adv_pra_t_d_rst( 'READ' )    !* read or initialize all required files
       !
@@ -633,7 +629,7 @@ CONTAINS
          !                                   !==========================!
          !
          IF( ln_rstart ) THEN
-            id1 = iom_varid( numrir, 'sxdmg'//cg , ldstop = .FALSE. )    ! file exist: id1>0
+            id1 = iom_varid( numrir, 'sx1md'//cg , ldstop = .FALSE. )    ! file exist: id1>0
          ELSE
             id1 = 0                                                  ! no restart: id1=0
          ENDIF
@@ -641,11 +637,11 @@ CONTAINS
          IF( id1 > 0 ) THEN                     !**  Read the restart file  **!
             !
             !                                                        ! ice damage !#bbm
-            CALL iom_get( numrir, jpdom_auto, 'sxdmg'//cg , sxdmg,  psgn = -1._wp )
-            CALL iom_get( numrir, jpdom_auto, 'sydmg'//cg , sydmg,  psgn = -1._wp )
-            CALL iom_get( numrir, jpdom_auto, 'sxxdmg'//cg, sxxdmg )
-            CALL iom_get( numrir, jpdom_auto, 'syydmg'//cg, syydmg )
-            CALL iom_get( numrir, jpdom_auto, 'sxydmg'//cg, sxydmg )
+            CALL iom_get( numrir, jpdom_auto, 'sx1md'//cg , sx1md,  psgn = -1._wp )
+            CALL iom_get( numrir, jpdom_auto, 'sy1md'//cg , sy1md,  psgn = -1._wp )
+            CALL iom_get( numrir, jpdom_auto, 'sxx1md'//cg, sxx1md )
+            CALL iom_get( numrir, jpdom_auto, 'syy1md'//cg, syy1md )
+            CALL iom_get( numrir, jpdom_auto, 'sxy1md'//cg, sxy1md )
             !
             CALL iom_get( numrir, jpdom_auto, 'sxdd1'//cg , sxdd1,  psgn = -1._wp )
             CALL iom_get( numrir, jpdom_auto, 'sydd1'//cg , sydd1,  psgn = -1._wp )
@@ -670,7 +666,7 @@ CONTAINS
             !
             IF(lwp) WRITE(numout,*) '   ==>>   start from rest OR previous run without Prather, set moments to 0'
             !
-            sxdmg = 0._wp   ;   sydmg = 0._wp   ;   sxxdmg = 0._wp   ;   syydmg = 0._wp   ;   sxydmg = 0._wp      ! ice damage !#bbm
+            sx1md = 0._wp   ;   sy1md = 0._wp   ;   sxx1md = 0._wp   ;   syy1md = 0._wp   ;   sxy1md = 0._wp      ! ice damage !#bbm
             sxdd1 = 0._wp   ;   sydd1 = 0._wp   ;   sxxdd1 = 0._wp   ;   syydd1 = 0._wp   ;   sxydd1 = 0._wp      !  !#bbm
             sxdd2 = 0._wp   ;   sydd2 = 0._wp   ;   sxxdd2 = 0._wp   ;   syydd2 = 0._wp   ;   sxydd2 = 0._wp      !  !#bbm
             sxdd3 = 0._wp   ;   sydd3 = 0._wp   ;   sxxdd3 = 0._wp   ;   syydd3 = 0._wp   ;   sxydd3 = 0._wp      !  !#bbm
@@ -687,11 +683,11 @@ CONTAINS
          ! ------------------------------------------------------------------------
          !
          !                                                           ! ice thickness
-         CALL iom_rstput( iter, nitrst, numriw, 'sxdmg'//cg , sxdmg  )
-         CALL iom_rstput( iter, nitrst, numriw, 'sydmg'//cg , sydmg  )
-         CALL iom_rstput( iter, nitrst, numriw, 'sxxdmg'//cg, sxxdmg )
-         CALL iom_rstput( iter, nitrst, numriw, 'syydmg'//cg, syydmg )
-         CALL iom_rstput( iter, nitrst, numriw, 'sxydmg'//cg, sxydmg )
+         CALL iom_rstput( iter, nitrst, numriw, 'sx1md'//cg , sx1md  )
+         CALL iom_rstput( iter, nitrst, numriw, 'sy1md'//cg , sy1md  )
+         CALL iom_rstput( iter, nitrst, numriw, 'sxx1md'//cg, sxx1md )
+         CALL iom_rstput( iter, nitrst, numriw, 'syy1md'//cg, syy1md )
+         CALL iom_rstput( iter, nitrst, numriw, 'sxy1md'//cg, sxy1md )
          !
          CALL iom_rstput( iter, nitrst, numriw, 'sxdd1'//cg , sxdd1  )
          CALL iom_rstput( iter, nitrst, numriw, 'sydd1'//cg , sydd1  )
