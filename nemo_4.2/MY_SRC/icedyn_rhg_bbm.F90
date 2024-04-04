@@ -1,6 +1,3 @@
-!! TO FIX: in EVP for shear at f-point they use the fmask with no-slip values !!! => 2 (look in eVP and try to see if needed here!!!)
-!!         => and do the same mask for the F-centric world!!!
-
 MODULE icedyn_rhg_bbm
    !!======================================================================
    !!                     ***  MODULE  icedyn_rhg_bbm  ***
@@ -52,7 +49,8 @@ MODULE icedyn_rhg_bbm
       &                   rz_muMC  = 0.7_wp,      &  !: slope of Mohr-Coulomb enveloppe
       &                   reps6    = 1.e-6_wp,    &
       &                   reps12   = 1.e-12_wp,   &
-      &                   reps24   = 1.e-24_wp
+      &                   reps24   = 1.e-24_wp,   &
+      &                   rlamb_min = 1._wp       ! minimum possible value for `lambda`, numerical issues otherwize
 
    REAL(wp),  SAVE :: rk0  ! factor to stiffness matrix => 1._wp / ( 1._wp - rz_nup*rz_nup)
    REAL(wp),  SAVE :: rk11, rk22, rk12, rk33 ! elements of stiffness matrix
@@ -66,17 +64,17 @@ MODULE icedyn_rhg_bbm
    REAL(wp), DIMENSION(:,:), ALLOCATABLE, SAVE :: xtcoast, xfcoast ! to prevent doing cross-nudging at the coast!
    REAL(wp), DIMENSION(:,:), ALLOCATABLE, SAVE :: xCNt, xCNf   ! cross nudging coefficients (time-dependant)
 
-   LOGICAL, PARAMETER :: l_use_v_for_h = .FALSE. ; !LOLO
+   LOGICAL, PARAMETER :: l_use_v_for_h = .TRUE.  !LOLO: we should not! But `h` is sloppy by essence in SI3...
 
    REAL(wp), SAVE :: zrhoco      !: sea-water density x ocean-ice drag coeff. [kg/m3]
    REAL(wp), SAVE :: zdtbbm, z1_dtbbm !: small time step (time splitting) [s] and its inverse [1/s]
-   
+
    LOGICAL,  SAVE :: l_CN        !: whether cross nudging is used ?
    LOGICAL,  SAVE :: l_CN_is_2d  !: whether cross nudging coefficient is a 2D array, not a scalar
    REAL(wp), SAVE :: rCNC_eff    !: effective cross-nudging coefficient [-]
-   
+
    REAL(wp), SAVE :: rz_alfm1, rz_betm1, r_i_do_bbm=1._wp  !: `r_i_do_bbm=0` when MEB (ln_MEB==.true.)
-   
+
    !! * Substitutions
 #  include "do_loop_substitute.h90"
 #  include "domzgr_substitute.h90"
@@ -93,7 +91,7 @@ CONTAINS
       !!-------------------------------------------------------------------
       INTEGER  ::   ji, jj     ! dummy loop indices
       INTEGER  ::   ierror
-      REAL(wp) :: zr
+      REAL(wp) :: zr, zce, zdts
       REAL(wp), DIMENSION(:,:), ALLOCATABLE :: zt1, zt2, zt3, zt4
       INTEGER :: jm
       !!-------------------------------------------------------------------
@@ -102,7 +100,7 @@ CONTAINS
          WRITE(numout,*) '**********************************************************************'
          WRITE(numout,*) '    *** Initialization of BBM rheology (ice_dyn_rhg_bbm_init) ***'
       ENDIF
-      
+
       r_i_do_bbm = 1._wp
       IF( ln_MEB ) r_i_do_bbm = 0._wp
       rz_alfm1 = rn_alrlx - 1._wp
@@ -111,19 +109,12 @@ CONTAINS
       zrhoco   = rho0 * rn_cio
       zdtbbm   = rdt_ice / REAL( nn_nbbm, wp )
       z1_dtbbm = 1._wp / zdtbbm
-      
+
       l_CN       = ( rn_crndg > 0._wp )
       l_CN_is_2d = ( ln_boost_CN_coast .OR. ln_boost_CN_high_dmg ) ! cross nudging coefficient will be a 2D array, not a scalar
 
-      rCNC_eff = rn_crndg * zdtbbm
-      
-      IF( lwp ) THEN
-         WRITE(numout,*) '  * Small time step     => zdtbbm   =', zdtbbm,  ' [s]'
-         WRITE(numout,*) '  * Effective CN coeff. => rCNC_eff =', rCNC_eff,' [-]'
-         WRITE(numout,*) ''
-      ENDIF
-      
-      
+      rCNC_eff = rn_crndg / REAL( nn_nbbm, wp )
+
       xmskt(:,:) =     tmask(:,:,1)
       xmskf(:,:) = MIN(fmask(:,:,1), 1._wp)
 
@@ -134,7 +125,7 @@ CONTAINS
       rk22 = rk0
       rk33 = rk0 * (1._wp - rz_nup)
 
-      rlambda0 = rn_eta0 / rn_E0     !: Viscosity / Elasticity of undamaged ice (aka relaxation time) [s]    
+      rlambda0 = rn_eta0 / rn_E0     !: Viscosity / Elasticity of undamaged ice (aka relaxation time) [s]
       IF( lwp ) WRITE(numout,*) '  * Viscous relaxation time scale => rlambda0 =', REAL(rlambda0,4), ' [s]'
 
       rsqrt_nu_rhoi = SQRT( 2._wp*(1._wp + rz_nup)*rhoi )
@@ -211,7 +202,29 @@ CONTAINS
       Xdxt(:,:) = SQRT( e1t(:,:)*e2t(:,:) )  ! Local `dx` of grid cell [m]
       Xdxf(:,:) = SQRT( e1f(:,:)*e2f(:,:) )  ! Local `dx` of grid cell [m]
       zr = SUM(Xdxt(:,:)*xmskt(:,:)) / MAX( SUM(xmskt(:,:)) , reps6 )
-      IF( lwp ) WRITE(numout,*) '  * Average `dx` for BBM => ', REAL(zr/1000._wp,4), ' [km]'
+      zce = rsqrt_E0 / rsqrt_nu_rhoi ! propagation speed of shearing elastic waves based on the mean `dx`
+      zdts = 0.5_wp*(zr/zce)        ! largest possible small time-step to consider...
+
+      IF( lwp ) THEN
+         WRITE(numout,*) '  * Big time step (advection & thermo)  => rdt_ice  =', rdt_ice, ' [s]'
+         WRITE(numout,*) '  * Average `dx` of domain => ', REAL(zr/1000._wp,4), ' [km]'
+         WRITE(numout,*) '     ==> propagation speed of shearing elastic waves =>',  zce, '[m/s]'
+         WRITE(numout,*) '     ==> the small time-step should therefore be about or below:', zdts, ' [s]'
+         WRITE(numout,*) '     ==> that would the case with a `nbbm` >',INT(rdt_ice/zdts,1)
+         WRITE(numout,*) '     ==> you have chose a `nbbm` =', nn_nbbm
+         WRITE(numout,*) '  * Small time step (rheology) => zdtbbm =', zdtbbm,  ' [s]'
+         IF(l_CN) THEN
+            WRITE(numout,*) '  * About cross-nudging:'
+            WRITE(numout,*) '      - CN parameter (gamma) => rn_crndg =', rn_crndg,' [-]'
+            WRITE(numout,*) '      - nudging coefficient  =>    k_cn  =', rn_crndg/rdt_ice,' [s**-1]'
+            WRITE(numout,*) '      - effective CN coeff.  => rCNC_eff (= k_cn*dt) =', rCNC_eff,' [-]'
+            WRITE(numout,*) '      - theoretical half-life of ajustment reached after', &
+               &                  INT(2._wp*LOG(2._wp)*REAL(nn_nbbm,wp)/rn_crndg,1), ' sub-time-steps!'
+         ENDIF
+         WRITE(numout,*) ''
+      ENDIF
+
+      IF(zdtbbm>zdts) CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: `nn_nbbm` is probably to small' )
 
       !! Cohesion and upper limit for compressive stress:
       zt1(:,:) = SQRT( rn_l_ref/Xdxt(:,:) )
@@ -242,14 +255,6 @@ CONTAINS
       !   END_2D
       !ENDIF
       !CALL lbc_lnk( 'icedyn_rhg_bbm', Xfmask, 'F', 1._wp )
-      !
-      !WRITE(cf_tmp,'("Xfmask_",i4.4,".tmp")') narea
-      !PRINT *, 'LOLO[icedyn_rhg_bbm.F90]: writing: '//TRIM(cf_tmp)
-      !CALL DUMP_FIELD( REAL(Xfmask,4), TRIM(cf_tmp), 'Xfmask' ) ; !lolo
-      !!
-      !WRITE(cf_tmp,'("fmask_",i4.4,".tmp")') narea
-      !PRINT *, 'LOLO[icedyn_rhg_bbm.F90]: writing: '//TRIM(cf_tmp)
-      !CALL DUMP_FIELD( REAL(fmask(:,:,1),4), TRIM(cf_tmp), 'fmask' ) ; !lolo
 
       DEALLOCATE( zt1, zt2 )
 
@@ -334,7 +339,7 @@ CONTAINS
       REAL(wp) :: zfac
       !!
       !! Add-ons Brodeau for bbm
-      REAL(wp), DIMENSION(jpi,jpj) :: ztmp1, ztmp2, ztmp3, ztmp4, ztmp5, zAt, zAf, zht, zhf
+      REAL(wp), DIMENSION(jpi,jpj) :: ztmp1, ztmp2, ztmp3, ztmp4, ztmp5, zAt, zAf, zht, zhf, z1_h_t, z1_h_f
       REAL(wp) :: zh, zt1, zt2, ztame, zmacc
       REAL(wp) :: zCorio, zU, zV, zMdt, zUo, zVo
       !!-------------------------------------------------------------------
@@ -371,7 +376,7 @@ CONTAINS
       WHERE( zAf(:,:) >= rclean_below_A ) xmsk_ice_f(:,:) = 1._wp
       xmsk_ice_t(:,:) = xmsk_ice_t(:,:)*xmskt(:,:)
       xmsk_ice_f(:,:) = xmsk_ice_f(:,:)*xmskf(:,:)
-      
+
       !! Compute h_f... Useless I think... Unless for saving it as output
       a_f(:,:) = zAf(:,:) ! => used for advection of `dmgf` !
       h_f(:,:) = zhf(:,:)
@@ -475,8 +480,8 @@ CONTAINS
          IF( iom_use('cncoeff_t') ) CALL iom_put( 'cncoeff_t' , ztmp3(:,:)*xmsk_ice_t )
          IF( iom_use('cncoeff_f') ) CALL iom_put( 'cncoeff_f' , ztmp4(:,:)*xmsk_ice_f )
          !
-         xCNt(:,:) = zdtbbm * ztmp3(:,:)
-         xCNf(:,:) = zdtbbm * ztmp4(:,:)
+         xCNt(:,:) = ztmp3(:,:) / REAL( nn_nbbm, wp )
+         xCNf(:,:) = ztmp4(:,:) / REAL( nn_nbbm, wp )
          !
       ENDIF !IF( l_CN_is_2d )
 
@@ -512,16 +517,15 @@ CONTAINS
          ztmp2(:,:) = sgm22t(:,:) * zht(:,:)
          ztmp3(:,:) = sgm12f(:,:) * zhf(:,:)
          !!
-         CALL div_stress_tensor_v2( 'T', e2u, e1v,  Xe1t2, Xe2t2,  Xe1f2, Xe2f2,  r1_e2u, r1_e1u, r1_e1v, r1_e2v,  r1_e1e2u, r1_e1e2v,  &
-            &                          ztmp1, ztmp2, ztmp3,  zfUu, zfVv )
+         CALL div_stress_tensor( 'T', Xe1t2, Xe2t2,  Xe1f2, Xe2f2,  r1_e2u, r1_e1u, r1_e1v, r1_e2v,  r1_e1e2u, r1_e1e2v,  &
+            &                         ztmp1, ztmp2, ztmp3,  zfUu, zfVv )
 
          ztmp1(:,:) = sgm11f(:,:) * zhf(:,:)
          ztmp2(:,:) = sgm22f(:,:) * zhf(:,:)
          ztmp3(:,:) = sgm12t(:,:) * zht(:,:)
          !!
-         CALL div_stress_tensor_v2( 'F', e2v, e1u,  Xe1f2, Xe2f2,  Xe1t2, Xe2t2,  r1_e2v, r1_e1v, r1_e1u, r1_e2u,  r1_e1e2v, r1_e1e2u,  &
-            &                          ztmp1, ztmp2, ztmp3,  zfUv, zfVu )
-
+         CALL div_stress_tensor( 'F', Xe1f2, Xe2f2,  Xe1t2, Xe2t2,  r1_e2v, r1_e1v, r1_e1u, r1_e2u,  r1_e1e2v, r1_e1e2u,  &
+            &                         ztmp1, ztmp2, ztmp3,  zfUv, zfVu )
 
          ! --- Computation of ice velocity --- !
          IF( MOD(jter,2) == 0 ) THEN
@@ -756,7 +760,7 @@ CONTAINS
       !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !
       !! Compute `elasticity`, and `update multiplicator` @ T-points (=> zelat, zmltt)
-      CALL PHASE_I( pdt, pAt, pht, pdmgt, ps11t, ps22t,  zelat, zlambt, zmltt )
+      CALL PHASE_I( pdt, pAt, pht, pdmgt, ps11t, ps22t, ps12t,  zelat, zlambt, zmltt )
       !
       !! Compute the 3 components of the strain-rate tensor @ T-points (=> ztp1, ztp2, ztp3):
       CALL strain_rate( 'T', pUu, pVv, pUv, pVu, r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, Xe1t2, Xe2t2, tmask(:,:,1), &
@@ -776,7 +780,7 @@ CONTAINS
       END_2D
 
       !! Compute `elasticity`, and `update multiplicator` @ F-points (=> zelaf, zmltf)
-      CALL PHASE_I( pdt, pAf, phf, pdmgf, ps11f, ps22f,  zelaf, zlambf, zmltf ) ! compute `elasticity` and `update multiplicator` @ F
+      CALL PHASE_I( pdt, pAf, phf, pdmgf, ps11f, ps22f, ps12f,  zelaf, zlambf, zmltf ) ! compute `elasticity` and `update multiplicator` @ F
       !
       !! Compute the 3 components of the strain-rate tensor @ F-points (=> ztp1, ztp2, ztp3):
       CALL strain_rate( 'F', pUv, pVu, pUu, pVv, r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, Xe1f2, Xe2f2, fmask(:,:,1), &
@@ -811,7 +815,15 @@ CONTAINS
          !!  Alternate / even/odd sub iterations => gives slightly better results than doing
          !!  it everytime (with half zrbal) on all stress comp.
          !!     (=> double checked that no `lbc_lnk` is needed in `rmpY2X()` !!!)
-         CALL CROSS_NUDGING( kts, pdt, pAt, pAf,  ps11t, ps22t, ps12t, ps11f, ps22f, ps12f )
+         IF( MOD(kts,2) == 0 ) THEN
+            !! Correcting of T-centric stress tensor components:
+            CALL CROSS_NUDGING( 'T', pht, phf, ps11f, ps22f, ps12t,   ps11t, ps22t, ps12f )
+            CALL clean_small_a_sgm( 'T', pAt, pAf,  ps11t, ps22t, ps12f )
+         ELSE
+            !! Correcting of F-centric stress tensor components:
+            CALL CROSS_NUDGING( 'F', phf, pht, ps11t, ps22t, ps12f,   ps11f, ps22f, ps12t )
+            CALL clean_small_a_sgm( 'F', pAt, pAf,  ps11f, ps22f, ps12t )
+         END IF
       ELSE
          IF( (kt==1).AND.(lwp) ) WRITE(numout,*) ' *** MIND: no cross-nudging applied!'
       ENDIF
@@ -836,10 +848,10 @@ CONTAINS
       WHERE( ztp0(:,:) > 0._wp ) pdmgf(:,:) = MAX( pdmgf(:,:) - pdt*rmpT2F( ztp2 ) , 0._wp )
 
       CALL clean_small_a_all( pAt, pAf,  pdmgt, pdmgf,  ps11t, ps22t, ps12t,  ps11f, ps22f, ps12f )
-      
+
       CALL cap_damage( 'T', 'update_stress_dmg', pdmgt )
       CALL cap_damage( 'F', 'update_stress_dmg', pdmgf )
-      
+
       !! --- Final LBC linking ---
       CALL lbc_lnk( 'UPDATE_STRESS_DMG@icedyn_rhg_bbm', ps11t,'T',1._wp, ps22t,'T',1._wp, ps12f,'F',1._wp, pdmgt,'T',1._wp, &
          &                                              ps11f,'F',1._wp, ps22f,'F',1._wp, ps12t,'T',1._wp, pdmgf,'F',1._wp  )
@@ -1007,23 +1019,27 @@ CONTAINS
    END SUBROUTINE rhg_bbm_rst
 
 
-   SUBROUTINE PHASE_I( pdt, pA, ph, pdmg, ps11, ps22, pelast, plamb, pmult )
+   SUBROUTINE PHASE_I( pdt, pA, ph, pdmg, ps11, ps22, ps12, pelast, plamb, pmult )
       !!
       REAL(wp),                 INTENT(in)  :: pdt         ! (small) time-step [s]
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: pA          ! Ice concentration
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: ph          ! Ice thickness
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: pdmg        ! Ice damage
-      REAL(wp), DIMENSION(:,:), INTENT(in)  :: ps11, ps22  ! sigma_11 & sigma_22 [Pa]
+      REAL(wp), DIMENSION(:,:), INTENT(in)  :: ps11, ps22, ps12  ! sigma_11 & sigma_22 [Pa]
       REAL(wp), DIMENSION(:,:), INTENT(out) :: pelast      ! Ice elasticity
       REAL(wp), DIMENSION(:,:), INTENT(out) :: plamb       ! Ice viscous time scale [s]
       REAL(wp), DIMENSION(:,:), INTENT(out) :: pmult       ! Multiplicator for stress tensor update
       !!
-      REAL(wp) :: zxpC, zsigI, zPmax, zc0, zc1, zPtld, zdmg, z1md, zE, zlamb, zlamb_min
+      REAL(wp) :: zA, z1mA, zxpC, zsigI, zPmax, zc0, zc1, zPtld, zdmg, z1md, zE, zeta, zlamb
+      REAL(wp) :: zsigII, zang, zcoeff
       INTEGER  :: ji, jj
 
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
 
-            zxpC = EXP( rn_C0*(1._wp - pA(ji,jj)) )  ! `expC` [Eq.8]
+            zA   = pA(ji,jj)
+            z1mA = 1._wp - zA
+
+            zxpC = EXP( rn_C0*z1mA )  ! `expC` [Eq.8]
 
             zdmg = pdmg(ji,jj)
             z1md = 1._wp - zdmg
@@ -1033,30 +1049,43 @@ CONTAINS
             !!       * E = E0 * (1 - d) * exp[-C*(1-A)]
             zE = rn_E0 * z1md * zxpC
 
-            !! Viscous time scale aka Lambda ( viscosity / elasticity ) [s]:
+            !! Viscosity [Pa.s]:
             !!    *** MEB (Dansereau et al., 2016):
             !!       * V = V0 * (1 - d)**a * exp[-C*(1-A)]  (viscosity)
-            !!       * => L = V/E = L0 * (1 - d)**[a -1]    (L0 == V0/E0)
-            !!
             !!    *** BBM (Olason et al. 2022) [Eq.10/Eq.9]:
-            !!       *    V = V0 * (1 - d)**a * exp[-b*C*(1-A)]    (with b=a in Olason et al. 2022)
-            !!       * => L = V/E = L0 * (1 - d)**[a -1] * ( exp[  -C*(1-A)] )**[b-1]
-            zlamb = rlambda0 * z1md**rz_alfm1 * zxpC**(r_i_do_bbm*rz_betm1)   ! (MEB => r_i_do_bbm=0 => '...' * zxpC**0 ==> '...' * 1 !)
-            !zlamb_min =  1.e-6_wp*( rlambda0 * zxpC**rz_alfm1 ) ! terms that prevents `lambda` to get too close to zero as d->1
-            !zlamb = MAX( zlamb , zlamb_min )
+            !!       *    V = V0 * (1 - d)**a * exp[b*-C*(1-A)]    (with b=a in Olason et al. 2022)
+            zeta = rn_eta0 * z1md**rn_alrlx * zxpC**(r_i_do_bbm*rn_btrlx)
 
-            !! --- P~ / Plastic failure [Eq.8]---
-            zPtld = 0._wp ! P~ when `sigma_I > 0` or simply when MEB !
-            IF( .NOT. ln_MEB ) THEN
-               zsigI = 0.5_wp * ( ps11(ji,jj) + ps22(ji,jj) ) ! sigI: normal stress aka first invariant
-               IF( zsigI < -reps24 ) THEN
-                  zPmax = -rn_P0 * ph(ji,jj)**1.5_wp * zxpC  ! `-P_max` (for sigI<0)
-                  zPtld = MIN( zPmax/zsigI , 1._wp )         ! Attention! it is -P~ w.r.t paper!
-               ENDIF
-            ENDIF
+            zlamb = zeta / MAX( zE, reps24 )  ! time-scale for viscous relaxation
+            zlamb = MAX( zlamb, rlamb_min )
+
+            zPmax = 9999._wp  !DEBUG flags for `dbg` blabla
+            zPtld = 9999._wp  !     //
+
+            zsigI = 0.5_wp * ( ps11(ji,jj) + ps22(ji,jj) ) ! sigI: normal stress aka first invariant
 
             !! --- "multiplicator" ---
-            pmult(ji,jj)  = MIN( zlamb/(zlamb + pdt*(1._wp - zPtld)) , 1._wp ) ! Multiplicator term [Eq.32]
+            pmult(ji,jj) = 1._wp   ! default for when  `zPmax < zsigI < 0`
+
+            IF( (.NOT. ln_MEB).AND.(zsigI < 0._wp) ) THEN
+            !IF( zsigI < -reps24 ) THEN
+               !!
+               zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
+               zang   = ATAN( zsigII / MAX( ABS(zsigI), reps24 ) )
+               !zang   = ATAN( zsigII / ABS(zsigI) )    ! `zsigI < -reps24` by `IF()` !
+               zcoeff = COS( zang )
+               zPmax = -rn_P0 * ph(ji,jj)**1.5_wp * zxpC * zcoeff       ! `-P_max` (for sigI<0)
+               !!
+               IF( zsigI < zPmax ) THEN
+                  zPtld = zPmax/zsigI         ! Attention! it is -P~ w.r.t paper!
+                  pmult(ji,jj)  = zlamb / ( zlamb + pdt*(1._wp - zPtld) )
+               !! ELSE => pmult=1 !
+               ENDIF
+            ELSE
+               !! When zsigI> 0 or when MEB:
+            !ELSEIF( zsigI > 0._wp) THEN
+               pmult(ji,jj)  = zlamb / ( zlamb + pdt )
+            ENDIF
 
             pelast(ji,jj) = zE
             plamb(ji,jj) = zlamb
@@ -1077,7 +1106,7 @@ CONTAINS
       REAL(wp), DIMENSION(:,:), INTENT(inout) :: pdmg             ! damage
       !!
       REAL(wp) :: zsigI, zsigII, zMC
-      REAL(wp) :: zdcrit, zmlt, zc1, zc2, zsqrtE, zTd
+      REAL(wp) :: zdcrit, zmlt, zsqrtE, zTd
       REAL(wp) :: rEdmgd
       INTEGER  :: ji, jj
       !!
@@ -1087,6 +1116,8 @@ CONTAINS
 
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
 
+            zdcrit = 9999._wp ; ! just for initialization
+
             zsqrtE = rEdmgd * SQRT(MAX(pE(ji,jj),reps6))   +   (1. - rEdmgd) * rsqrt_E0  ! `sqrt(E)` damaged or undamaged...
             zTd    = MAX( pdx(ji,jj) * rsqrt_nu_rhoi / zsqrtE , reps6 )              ! characteristic time for damage [s] |  (we shall divide by it)...
 
@@ -1094,68 +1125,76 @@ CONTAINS
 
             zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
 
-            zMC =  zsigII + rz_muMC*zsigI                         ! Mohr-Coulomb  [Eq.29.2]
-            zMC  = SIGN(1._wp, zMC) * MAX( ABS(zMC), reps12 ) ! get rid of values too close to 0 for upcoming division
 
-            zc1 = 0.5_wp + SIGN( 0.5_wp, -pNlim(ji,jj) - zsigI ) !  if (zsigI < -pNlim) => zc1=1. else => zc1=0.
+            IF( (ABS(zsigI)>0.1_wp).AND.(zsigII>0.1_wp) ) THEN
 
-            zdcrit =  (1._wp - zc1) *  pcohe(ji,jj) / zMC                      &  ! `c/MC`   default value for `d_crit` [Eq.29.2]
-               &     +      zc1     * -pNlim(ji,jj) / MIN( zsigI , -1._wp )       ! `-N/sigI`[Eq.29.1]
+               zMC =  zsigII + rz_muMC*zsigI                         ! Mohr-Coulomb  [Eq.29.2]
+               zdcrit = pcohe(ji,jj) / zMC
+               IF( zsigI < -pNlim(ji,jj) ) zdcrit = -pNlim(ji,jj) / zsigI
 
-            zc1 = 0.5_wp + SIGN( 0.5_wp, zdcrit - reps24          ) ! if (zdcrit > 0) => zc1=1. else zc1=0.
-            zc2 = 0.5_wp + SIGN( 0.5_wp,  1._wp - reps24 - zdcrit ) ! if (zdcrit < 1) => zc2=1. else zc2=0.
-            zmlt = (1._wp - zdcrit) * pdt / zTd * zc1*zc2           ! Multiplicator for updating stress and damage: `(1 - d_crit)*(pdt/t_d)`
-
-            pdmg(ji,jj) =  MIN( pdmg(ji,jj) + (1._wp - pdmg(ji,jj)) * zmlt , rn_dmg_max )
-            ps11(ji,jj) =       ps11(ji,jj) -          ps11(ji,jj)  * zmlt
-            ps22(ji,jj) =       ps22(ji,jj) -          ps22(ji,jj)  * zmlt
-            ps12(ji,jj) =       ps12(ji,jj) -          ps12(ji,jj)  * zmlt
+               IF( (zdcrit > 0._wp).AND.(zdcrit < 1._wp) ) THEN
+                  !! Damage grows, and stresses are decreased accordingly
+                  zmlt = (1._wp - zdcrit) * pdt / zTd          ! Multiplicator for updating stress and damage: `(1 - d_crit)*(pdt/t_d)`
+                  pdmg(ji,jj) =  MIN( pdmg(ji,jj) + (1._wp - pdmg(ji,jj)) * zmlt , rn_dmg_max )
+                  ps11(ji,jj) =       ps11(ji,jj) -          ps11(ji,jj)  * zmlt
+                  ps22(ji,jj) =       ps22(ji,jj) -          ps22(ji,jj)  * zmlt
+                  ps12(ji,jj) =       ps12(ji,jj) -          ps12(ji,jj)  * zmlt
+               END IF
+            ENDIF
 
       END_2D
 
    END SUBROUTINE MOHR_COULOMB_DMG
 
 
-
-
-
-   SUBROUTINE CROSS_NUDGING( kts, pdt, pAt, pAf,  ps11t, ps22t, ps12t, ps11f, ps22f, ps12f )
+   SUBROUTINE CROSS_NUDGING( cgt, ph, phx, ps11x, ps22x, ps12x,   ps11, ps22, ps12 )
       !!
-      INTEGER,                  INTENT(in)    :: kts                  ! current small sub-time-step
-      REAL(wp),                 INTENT(in)    :: pdt                  ! small time-step [s]
-      REAL(wp), DIMENSION(:,:), INTENT(in)    :: pAt, pAf             ! ice concentration @T and @F
-      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11t, ps22t, ps12t  ! T-centric Sigmas [Pa]
-      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11f, ps22f, ps12f  ! F-centric Sigmas [Pa]
+      CHARACTER(len=1),         INTENT(in)    :: cgt                  ! 'T' or 'F' -centric grid ?
+      REAL(wp), DIMENSION(:,:), INTENT(in)    :: ph, phx              ! ice thickness at center-point, and corner-point, of relevant grid
+      REAL(wp), DIMENSION(:,:), INTENT(in)    :: ps11x, ps22x, ps12x  ! 3 stresses reference on grid [Pa]
+      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11,  ps22,  ps12   ! 3 stresses on grid to correct [Pa]
       !!
-      IF( MOD(kts,2) == 0 ) THEN
+      REAL(wp), DIMENSION(jpi,jpj) :: zs11x, zs22x, zs12x, z1_h, z1_hx
+      !!
+      !! Nudging must use `sigma*h` rather than `sigma`:
+      zs11x(:,:) = ps11x(:,:)*phx(:,:)
+      zs22x(:,:) = ps22x(:,:)*phx(:,:)
+      zs12x(:,:) = ps12x(:,:)* ph(:,:)
+      !!
+      !!
+      IF( cgt == 'T' ) THEN
          !! Only T-centric stress comp. are corrected w.r.t F-centric stress comp.
-         IF(l_CN_is_2d) THEN
-            ps11t(:,:) = ps11t(:,:) - xCNt(:,:) * ( ps11t(:,:) - rmpF2T( ps11f, lconserv=.TRUE. ) )
-            ps22t(:,:) = ps22t(:,:) - xCNt(:,:) * ( ps22t(:,:) - rmpF2T( ps22f, lconserv=.TRUE. ) )
-            ps12f(:,:) = ps12f(:,:) - xCNf(:,:) * ( ps12f(:,:) - rmpT2F( ps12t, lconserv=.TRUE. ) )
-         ELSE
-            ps11t(:,:) = ps11t(:,:) - rCNC_eff * ( ps11t(:,:) - rmpF2T( ps11f, lconserv=.TRUE. ) ) * xmskt(:,:)
-            ps22t(:,:) = ps22t(:,:) - rCNC_eff * ( ps22t(:,:) - rmpF2T( ps22f, lconserv=.TRUE. ) ) * xmskt(:,:)
-            ps12f(:,:) = ps12f(:,:) - rCNC_eff * ( ps12f(:,:) - rmpT2F( ps12t, lconserv=.TRUE. ) ) * xmskf(:,:)
-         ENDIF
-         !#tested! => ok! CALL lbc_lnk( 'CROSS_NUDGING_T@icedyn_rhg_bbm',  ps11t,'T',1._wp,  ps22t,'T',1._wp,  ps12f,'F',1._wp )
-         CALL clean_small_a_sgm( 'T', pAt, pAf,  ps11t, ps22t, ps12f )
+         z1_h(:,:)  = 1._wp / MAX( ph(:,:),  reps6) * xmskt(:,:)
+         z1_hx(:,:) = 1._wp / MAX( phx(:,:), reps6) * xmskf(:,:)
          !!
+         IF(l_CN_is_2d) THEN
+            ps11(:,:) = ps11(:,:) - xCNt(:,:) * ( ps11(:,:) - rmpF2T( zs11x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps22(:,:) = ps22(:,:) - xCNt(:,:) * ( ps22(:,:) - rmpF2T( zs22x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps12(:,:) = ps12(:,:) - xCNf(:,:) * ( ps12(:,:) - rmpT2F( zs12x, lconserv=.TRUE. ) * z1_hx(:,:))
+         ELSE
+            ps11(:,:) = ps11(:,:) - rCNC_eff  * ( ps11(:,:) - rmpF2T( zs11x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps22(:,:) = ps22(:,:) - rCNC_eff  * ( ps22(:,:) - rmpF2T( zs22x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps12(:,:) = ps12(:,:) - rCNC_eff  * ( ps12(:,:) - rmpT2F( zs12x, lconserv=.TRUE. ) * z1_hx(:,:))
+         ENDIF
+         !!
+      ELSEIF( cgt == 'F' ) THEN
+         !! Only F-centric stress comp. are corrected w.r.t F-centric stress comp.
+         z1_h(:,:)  = 1._wp / MAX( ph(:,:),  reps6) * xmskf(:,:)
+         z1_hx(:,:) = 1._wp / MAX( phx(:,:), reps6) * xmskt(:,:)
+         !!
+         IF(l_CN_is_2d) THEN
+            ps11(:,:) = ps11(:,:) - xCNf(:,:) * ( ps11(:,:) - rmpT2F( zs11x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps22(:,:) = ps22(:,:) - xCNf(:,:) * ( ps22(:,:) - rmpT2F( zs22x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps12(:,:) = ps12(:,:) - xCNt(:,:) * ( ps12(:,:) - rmpF2T( zs12x, lconserv=.TRUE. ) * z1_hx(:,:))
+         ELSE
+            ps11(:,:) = ps11(:,:) - rCNC_eff  * ( ps11(:,:) - rmpT2F( zs11x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps22(:,:) = ps22(:,:) - rCNC_eff  * ( ps22(:,:) - rmpT2F( zs22x, lconserv=.TRUE. ) * z1_h(:,:) )
+            ps12(:,:) = ps12(:,:) - rCNC_eff  * ( ps12(:,:) - rmpF2T( zs12x, lconserv=.TRUE. ) * z1_hx(:,:))
+         ENDIF
       ELSE
-         !! Only F-centric stress comp. are corrected w.r.t T-centric stress comp.
-         IF(l_CN_is_2d) THEN
-            ps11f(:,:) = ps11f(:,:) - xCNf(:,:) * ( ps11f(:,:) - rmpT2F( ps11t, lconserv=.TRUE. ) )
-            ps22f(:,:) = ps22f(:,:) - xCNf(:,:) * ( ps22f(:,:) - rmpT2F( ps22t, lconserv=.TRUE. ) )
-            ps12t(:,:) = ps12t(:,:) - xCNt(:,:) * ( ps12t(:,:) - rmpF2T( ps12f, lconserv=.TRUE. ) )
-         ELSE
-            ps11f(:,:) = ps11f(:,:) - rCNC_eff * ( ps11f(:,:) - rmpT2F( ps11t, lconserv=.TRUE. ) ) * xmskf(:,:)
-            ps22f(:,:) = ps22f(:,:) - rCNC_eff * ( ps22f(:,:) - rmpT2F( ps22t, lconserv=.TRUE. ) ) * xmskf(:,:)
-            ps12t(:,:) = ps12t(:,:) - rCNC_eff * ( ps12t(:,:) - rmpF2T( ps12f, lconserv=.TRUE. ) ) * xmskt(:,:)
-         ENDIF
-         !#tested! => ok! CALL lbc_lnk( 'CROSS_NUDGING_F@icedyn_rhg_bbm',  ps11f,'F',1._wp,  ps22f,'F',1._wp,  ps12t,'T',1._wp )
-         CALL clean_small_a_sgm( 'F', pAt, pAf,  ps11f, ps22f, ps12t )
-         !!
+         CALL ctl_stop( 'STOP', 'CROSS_NUDGING() => wrong type of grid-point: '//cgt )
       ENDIF
+      !!
    END SUBROUTINE CROSS_NUDGING
 
 

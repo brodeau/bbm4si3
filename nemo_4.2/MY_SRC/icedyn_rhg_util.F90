@@ -39,15 +39,15 @@ MODULE icedyn_rhg_util
    PUBLIC   smooth9p
 
    PUBLIC   smoothCrossTF
-   
+
    PUBLIC clean_small_a_all
    PUBLIC clean_small_a_sgm
 
    PUBLIC sigmaII
 
    REAL(wp), PARAMETER, PUBLIC :: rclean_below_A = 0.01_wp
-   
-   REAL(wp), PARAMETER :: rtol_dmg = 0.1_wp   ! tolerance for damage overshoot (above/below 1/0)   
+
+   REAL(wp), PARAMETER :: rtol_dmg = 0.1_wp   ! tolerance for damage overshoot (above/below 1/0)
 
    !REAL(wp), PARAMETER :: rrhv_dmg = 0.8_wp
 
@@ -402,9 +402,9 @@ CONTAINS
             it8 = ji+1 ; jt8 = jj-1
             !!
             zm0 = zma( ji,jj )
-            zm1 = zma(it1,jt1) 
-            zm2 = zma(it2,jt2) 
-            zm3 = zma(it3,jt3) 
+            zm1 = zma(it1,jt1)
+            zm2 = zma(it2,jt2)
+            zm3 = zma(it3,jt3)
             zm4 = zma(it4,jt4)
             !!
             zm5 = zma(it5,jt5) * zd
@@ -670,18 +670,19 @@ CONTAINS
       zt4(:,:) = ps12h(:,:) * pe2e2_e(:,:)
       !
       DO_2D( nn_hls-1, nn_hls-1, nn_hls-1, nn_hls-1 )
-      !                   !--- ds11/dx + ds12/dy
-      pdivSx(ji,jj) = ( ( zt1(ji+ip,jj) - zt1(ji+im,jj) ) * p1_e2x(ji,jj) &
-         &            + ( zt3(ji,jj+jp) - zt3(ji,jj+jm) ) * p1_e1x(ji,jj) &
-         &                 ) * p1_e1e2x(ji,jj)
-      !                   !--- ds22/dy + ds12/dx
-      pdivSy(ji,jj) = ( ( zt2(ji,jj-jm) - zt2(ji,jj-jp) ) * p1_e1y(ji,jj) &
-         &            + ( zt4(ji-im,jj) - zt4(ji-ip,jj) ) * p1_e2y(ji,jj) &
-         &                 ) * p1_e1e2y(ji,jj)
-      !
+            !                   !--- ds11/dx + ds12/dy
+            pdivSx(ji,jj) = ( ( zt1(ji+ip,jj) - zt1(ji+im,jj) ) * p1_e2x(ji,jj) &
+               &            + ( zt3(ji,jj+jp) - zt3(ji,jj+jm) ) * p1_e1x(ji,jj) &
+               &                 ) * p1_e1e2x(ji,jj)
+            !                   !--- ds22/dy + ds12/dx
+            pdivSy(ji,jj) = ( ( zt2(ji,jj-jm) - zt2(ji,jj-jp) ) * p1_e1y(ji,jj) &
+               &            + ( zt4(ji-im,jj) - zt4(ji-ip,jj) ) * p1_e2y(ji,jj) &
+               &                 ) * p1_e1e2y(ji,jj)
+            !
       END_2D
       !
    END SUBROUTINE div_stress_tensor
+
 
    SUBROUTINE div_stress_tensor_v2( cgt,  pe2x, pe1y, pe1e1, pe2e2,  pe1e1_e, pe2e2_e,  p1_e2x, p1_e1x, p1_e1y, p1_e2y, p1_e1e2x, p1_e1e2y,  &
       &                               ps11h, ps22h, ps12h,  pdivSx, pdivSy )

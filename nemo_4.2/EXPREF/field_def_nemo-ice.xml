@@ -44,6 +44,7 @@
       <field id="snwthic"      long_name="Snow thickness"                                          standard_name="snow_thickness"                            unit="m"    />
       <field id="icebrv"       long_name="brine volume"                                                                                                      unit="%"    />
       <field id="iceage"       long_name="ice age"             unit="days" detect_missing_value="true"/>
+
       <!-- BBM: -->
       <field id="icedmgt"      long_name="ice damage at T-points"                                  standard_name="sea_ice_damage_t"        unit=""    /> <!-- #bbm -->
       <field id="icedmgf"      long_name="ice damage at F-points"                                  standard_name="sea_ice_damage_f"        unit=""    /> <!-- #bbm -->

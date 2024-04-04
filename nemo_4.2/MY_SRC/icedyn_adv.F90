@@ -55,7 +55,7 @@ MODULE icedyn_adv
 
    ! Transformation of stresses to something positive and not too large!!!
    REAL(wp), PARAMETER :: r_sgm_sf    = 1.E-4_wp        ! scale-factor from Pa to 10xM.Pa
-   REAL(wp), PARAMETER :: r_1_sgm_sf  = 1._wp/r_sgm_sf  
+   REAL(wp), PARAMETER :: r_1_sgm_sf  = 1._wp/r_sgm_sf
    REAL(wp), PARAMETER :: r_mltpl_s12 = 5.0_wp
    REAL(wp), PARAMETER :: r_mltpl_skk = 1.0_wp
 
@@ -143,10 +143,10 @@ CONTAINS
                z_s12_ao = r_mltpl_s12 * REAL( CEILING( z_s12_ao/r_mltpl_s12) , wp ) ! be a multiple of `r_mltpl_s12` and just above it...
                z_s12_ao = MAX( z_s12_ao, 5._wp )
             ENDIF
-            
+
             !! Advect at T points with u@U, v@V velocities
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-            
+
             ! Transform before advection:
             zdmg_pos =      (1._wp - dmgt)           * xmskt  ! cleaner to advect `1-d` rather than `d`...
             zs11_pos = (-sgm11t*r_sgm_sf + z_skk_ao) * xmskt
@@ -175,10 +175,10 @@ CONTAINS
             ! Fall back after advection:
             dmgt   = (1._wp - zdmg_pos)
             CALL cap_damage( 'T', 'ice_dyn_adv', dmgt )
-            sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt            
+            sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt
             sgm22t = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt
-            sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt            
-            
+            sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt
+
 
             !! Advect at F points with u@V, v@U velocities
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -214,38 +214,38 @@ CONTAINS
             sgm22f = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf
             sgm12f = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf
 
-
             IF( l_advct_oldroyd ) THEN
-               IF(lwp) WRITE(numout,'("  *** Going for Oldroyd advection term, kt=",i5.5)') kt
-               CALL clean_small_a_sgm( 'T', at_i, a_f,  sgm11t, sgm22t, sgm12f )
-               CALL clean_small_a_sgm( 'F', at_i, a_f,  sgm11f, sgm22f, sgm12t )
-
-               !! For the advection of the tensor, it is not enough, we need to add the 2 extra terms of the
-               !! "upper-convected time" or "Oldroyd" derivative:
-               !IF(lwp) WRITE(numout,*) '    *** Oldroyd terms for advection of stress tensor@T, kt =', kt
+               !!
                CALL strain_rate( 'T', u_ice, v_ice, uVice, vUice, &
                   &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, e1t*e1t, e2t*e2t, tmask(:,:,1), &
                   &              zdudx, zdvdy, zdmg_pos, lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
                !!                         =>  `zdmg_pos` used for receiving the shear, which is not used anyway...
-               ! Incrementing:
-               sgm11t(:,:) = sgm11t(:,:) + 2._wp*rDt_ice*( zdudx(:,:)*sgm11t(:,:) + zdudy(:,:)*sgm12t(:,:) )*xmskt(:,:)
-               sgm22t(:,:) = sgm22t(:,:) + 2._wp*rDt_ice*( zdvdy(:,:)*sgm22t(:,:) + zdvdx(:,:)*sgm12t(:,:) )*xmskt(:,:)
-               sgm12t(:,:) = sgm12t(:,:) + rDt_ice*( zdiv(:,:)*sgm12t(:,:) + zdudy(:,:)*sgm22t(:,:) + zdvdx(:,:)*sgm11t(:,:) )*xmskt(:,:)
-
-               !IF(lwp) WRITE(numout,*) '    *** Oldroyd terms for advection of stress tensor@F, kt =', kt
+               IF(nn_d_adv==3) THEN
+                  IF(lwp) WRITE(numout,'("  *** Going for LOWER-ADVECTED advection term, kt=",i5.5)') kt
+                  CALL add_lower_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt,  sgm11t, sgm22t, sgm12t )
+               ENDIF
+               IF(nn_d_adv==4) THEN
+                  IF(lwp) WRITE(numout,'("  *** Going for UPPER-ADVECTED advection term, kt=",i5.5)') kt
+                  CALL add_upper_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt,  sgm11t, sgm22t, sgm12t )
+               ENDIF
+               !!
                CALL strain_rate( 'F', uVice, vUice, u_ice, v_ice, &
                   &              r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, e1f*e1f, e2f*e2f, fmask(:,:,1), &
                   &              zdudx, zdvdy, zdmg_pos,  lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
                !!                         =>  `zdmg_pos` used for receiving the shear, which is not used anyway...
-               !!
-               ! Incrementing:
-               sgm11f(:,:) = sgm11f(:,:) + 2._wp*rDt_ice*( zdudx(:,:)*sgm11f(:,:) + zdudy(:,:)*sgm12f(:,:) )*xmskf(:,:)
-               sgm22f(:,:) = sgm22f(:,:) + 2._wp*rDt_ice*( zdvdy(:,:)*sgm22f(:,:) + zdvdx(:,:)*sgm12f(:,:) )*xmskf(:,:)
-               sgm12f(:,:) = sgm12f(:,:) + rDt_ice*( zdiv(:,:)*sgm12f(:,:) + zdudy(:,:)*sgm22f(:,:) + zdvdx(:,:)*sgm11f(:,:) )*xmskf(:,:)
+               IF(nn_d_adv==3) THEN
+                  CALL add_lower_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf,  sgm11f, sgm22f, sgm12f )
+               ENDIF
+               IF(nn_d_adv==4) THEN
+                  CALL add_upper_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf,  sgm11f, sgm22f, sgm12f )
+               ENDIF
 
             ELSE
-               IF(lwp) WRITE(numout,'("  *** Skipping Oldroyd advection term, kt=",i5.5)') kt
+               IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i5.5)') kt
             END IF !IF( l_advct_oldroyd )
+
+            CALL clean_small_a_sgm( 'T', at_i, a_f,  sgm11t, sgm22t, sgm12f )
+            CALL clean_small_a_sgm( 'F', at_i, a_f,  sgm11f, sgm22f, sgm12t )
 
          END IF !IF( nn_d_adv >= 1 )
       END IF !IF( ln_rhg_BBM )
@@ -321,12 +321,32 @@ CONTAINS
       !
       IF( ln_rhg_BBM ) THEN
          l_advct_stresses = (nn_d_adv >= 2) ! advect non only damage but also components of stress tensors
-         l_advct_oldroyd  = (nn_d_adv == 3) ! add the terms for advection of tensor ("upper-convected time" aka "Oldroyd" derivatives)
+         l_advct_oldroyd  = (nn_d_adv >= 3) ! add the terms for advection of tensor ("upper-convected time" aka "Oldroyd" derivatives)
          CALL adv_pra_t_d_init( )
          CALL adv_pra_f_d_init( )
       END IF
       !
    END SUBROUTINE ice_dyn_adv_init
+
+
+   SUBROUTINE add_lower_advected( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11, ps22, ps12 )
+      REAL(wp), DIMENSION(:,:), INTENT(in)    :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
+      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11, ps22, ps12
+      !! Lower-convected version (sign is inversed because moved from LHS to RHS):
+      ps11(:,:) = ps11(:,:) - 2._wp*rDt_ice*( pdudx(:,:)*ps11(:,:) + pdvdx(:,:)*ps12(:,:) )*zmsk(:,:)
+      ps22(:,:) = ps22(:,:) - 2._wp*rDt_ice*( pdvdy(:,:)*ps22(:,:) + pdudy(:,:)*ps12(:,:) )*zmsk(:,:)
+      ps12(:,:) = ps12(:,:) - rDt_ice*( pdiv(:,:)*ps12(:,:) + pdudy(:,:)*ps11(:,:) + pdvdx(:,:)*ps22(:,:) )*zmsk(:,:)
+   END SUBROUTINE add_lower_advected
+
+   SUBROUTINE add_upper_advected( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11, ps22, ps12 )
+      REAL(wp), DIMENSION(:,:), INTENT(in)    :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
+      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11, ps22, ps12
+      !! Upper-convected version (sign is inversed because moved from LHS to RHS):
+      ps11(:,:) = ps11(:,:) + 2._wp*rDt_ice*( pdudx(:,:)*ps11(:,:) + pdudy(:,:)*ps12(:,:) )*zmsk(:,:)
+      ps22(:,:) = ps22(:,:) + 2._wp*rDt_ice*( pdvdy(:,:)*ps22(:,:) + pdvdx(:,:)*ps12(:,:) )*zmsk(:,:)
+      ps12(:,:) = ps12(:,:) + rDt_ice*( pdiv(:,:)*ps12(:,:) + pdudy(:,:)*ps22(:,:) + pdvdx(:,:)*ps11(:,:) )*zmsk(:,:)
+   END SUBROUTINE add_upper_advected
+
 
 #else
    !!----------------------------------------------------------------------

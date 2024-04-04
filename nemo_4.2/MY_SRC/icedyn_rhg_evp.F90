@@ -51,7 +51,7 @@ MODULE icedyn_rhg_evp
    INTEGER ::   ncvgid   ! netcdf file id
    INTEGER ::   nvarid   ! netcdf variable id
    REAL(wp), DIMENSION(:,:), ALLOCATABLE ::   fimask   ! mask at F points for the ice
-   
+
    !! * Substitutions
 #  include "do_loop_substitute.h90"
 #  include "domzgr_substitute.h90"
@@ -268,7 +268,7 @@ CONTAINS
          zmf  (ji,jj) = zm1 * ff_t(ji,jj)                            ! Coriolis at T points (m*f)
          zdt_m(ji,jj) = zdtevp / MAX( zm1, zmmin )                   ! dt/m at T points (for alpha and beta coefficients)
       END_2D
-      
+
       DO_2D( nn_hls-1, nn_hls-1, nn_hls-1, nn_hls-1 )
 
          ! ice fraction at U-V points
@@ -685,9 +685,8 @@ CONTAINS
          CALL agrif_interp_ice( 'U' )
          CALL agrif_interp_ice( 'V' )
 #endif
-         !IF( ln_bdy )   CALL bdy_ice_dyn( 'U', u_ice, v_ice )
-         !IF( ln_bdy )   CALL bdy_ice_dyn( 'V', u_ice, v_ice )
-         !IF( ln_bdy )   CALL bdy_ice_dyn( u_ice, v_ice )
+         IF( ln_bdy )   CALL bdy_ice_dyn( 'U' )
+         IF( ln_bdy )   CALL bdy_ice_dyn( 'V' )
          !
          ! convergence test
          IF( nn_rhg_chkcvg == 2 )   CALL rhg_cvg( kt, jter, nn_nevp, u_ice, v_ice, zu_ice, zv_ice, zmsk15 )
@@ -702,7 +701,7 @@ CONTAINS
                za_i_ups(:,:,:) = a_i(:,:,:)
                zv_i_ups(:,:,:) = v_i(:,:,:)
             ELSE
-               CALL lbc_lnk( 'icedyn_rhg_evp', za_i_ups, 'T', 1.0_wp, zv_i_ups, 'T', 1.0_wp )               
+               CALL lbc_lnk( 'icedyn_rhg_evp', za_i_ups, 'T', 1.0_wp, zv_i_ups, 'T', 1.0_wp )
             ENDIF
             !
             CALL rhg_upstream( jter, zdt_ups, u_ice, v_ice, za_i_ups )   ! upstream advection: a_i
@@ -722,7 +721,7 @@ CONTAINS
 
       IF(iom_use('fUu'))  CALL iom_put( 'fUu' , zfU )
       IF(iom_use('fVv'))  CALL iom_put( 'fVv' , zfV )
-  
+
       IF( ln_aEVP )   CALL iom_put( 'beta_evp' , zbeta )
       !
       IF( ll_advups .AND. ln_str_H79 )   CALL lbc_lnk( 'icedyn_rhg_evp', strength, 'T', 1.0_wp )
@@ -755,7 +754,7 @@ CONTAINS
             &   ) * 0.25_wp * r1_e1e2t(ji,jj)
 
          ! maximum shear rate at T points (includes tension, output only)
-         pshear_i(ji,jj) = SQRT( zdt2 + zds2 ) * zmsk(ji,jj) ! 
+         pshear_i(ji,jj) = SQRT( zdt2 + zds2 ) * zmsk(ji,jj) !
 
          ! shear at T-points
          zshear(ji,jj)   = SQRT( zds2 ) * zmsk(ji,jj)
@@ -770,7 +769,7 @@ CONTAINS
 
          ! delta* at T points (pdelta_i)
          rswitch         = 1._wp - MAX( 0._wp, SIGN( 1._wp, -zdelta(ji,jj) ) ) ! 0 if delta=0
-         pdelta_i(ji,jj) = zdelta(ji,jj) + rn_creepl * rswitch  
+         pdelta_i(ji,jj) = zdelta(ji,jj) + rn_creepl * rswitch
                            ! it seems that deformation used for advection and mech redistribution is delta*
                            ! MV in principle adding creep limit is a regularization for viscosity not for delta
                            ! delta_star should not (in my view) be used in a replacement for delta
@@ -780,12 +779,12 @@ CONTAINS
       CALL lbc_lnk( 'icedyn_rhg_evp', pshear_i, 'T', 1._wp, pdivu_i, 'T', 1._wp, pdelta_i, 'T', 1._wp, zten_i, 'T', 1._wp, &
          &                            zshear  , 'T', 1._wp, zdelta , 'T', 1._wp, zs1     , 'T', 1._wp, zs2   , 'T', 1._wp, zs12, 'F', 1._wp )
 
-      IF( iom_use('iceshrf')    ) CALL iom_put( 'iceshrf' , zds )      
+      IF( iom_use('iceshrf')    ) CALL iom_put( 'iceshrf' , zds )
       IF( iom_use('ice_sig11')  ) CALL iom_put( 'ice_sig11' ,  0.5_wp*(zs1+zs2)*zmsk00 )
       IF( iom_use('ice_sig22')  ) CALL iom_put( 'ice_sig22' ,  0.5_wp*(zs1-zs2)*zmsk00 )
       IF( iom_use('ice_sig12')  ) CALL iom_put( 'ice_sig12' ,  zs12            *zmsk00 )
 
-      
+
       ! --- Store the stress tensor for the next time step --- !
       pstress1_i (:,:) = zs1 (:,:)
       pstress2_i (:,:) = zs2 (:,:)
@@ -833,7 +832,7 @@ CONTAINS
             zsig12           =   zfac * z1_ecc2 * zshear(ji,jj) * 0.5_wp
 
             ! Stress invariants (sigma_I, sigma_II, Coon 1974, Feltham 2008)
-            zsig_I (ji,jj)   =   0.5_wp * zsig1 
+            zsig_I (ji,jj)   =   0.5_wp * zsig1
             zsig_II(ji,jj)   =   0.5_wp * SQRT ( zsig2 * zsig2 + 4._wp * zsig12 * zsig12 )
 
          END_2D

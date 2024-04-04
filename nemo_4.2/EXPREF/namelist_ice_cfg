@@ -21,16 +21,8 @@
 !------------------------------------------------------------------------------
 &nampar         !   Generic parameters
 !------------------------------------------------------------------------------
-   jpl              =   5                ! 5 ice category!
-   ln_virtual_itd   =   .false.          !  virtual ITD mono-category parameterization (jpl=1 only)
-   !                                     !     i.e. enhanced thermal conductivity & virtual thin ice melting
-   ln_icethd        = .true.             !lolo!  ice thermo   (T) or not (F)
    rn_amax_n        =   0.999999         !  maximum tolerated ice concentration NH
    rn_amax_s        =   0.999999         !  maximum tolerated ice concentration SH
-   cn_icerst_in     = 'NANUK4_ICE-BBM2400_00012720_restart_ice'   !  suffix of ice restart name (input)
-   cn_icerst_out    = 'restart_ice'      !  suffix of ice restart name (output)
-   cn_icerst_indir  = '/lus/scratch/CT1/hmg2840/brodeau/tmp/NANUK4/NANUK4_ICE-BBM2400_prod/RST//19970215_BBM'  !  directory to read   input ice restarts
-   cn_icerst_outdir = '/lus/scratch/CT1/hmg2840/brodeau/NANUK4/NANUK4_ICE-BBM2400-R/00038280' !  directory to write output ice restarts
    !
    ln_damage        = .true.          !  existance of the "ice damage" tracer in the code?
    !                                  !   must be used with brittle rheologies
@@ -55,8 +47,6 @@
 &namdyn_rhg     !   Ice rheology
 !------------------------------------------------------------------------------
    ln_rhg_EVP       = .false.         !  EVP rheology
-      ln_aEVP       = .true.          !     adaptive rheology (Kimmritz et al. 2016 & 2017)
-      nn_nevp       = 100             !     number of EVP subcycles
    !                                  !
    ln_rhg_BBM       = .true.          !  BBM rheology
       ln_MEB        = .false.         !     use the MEB rheology (Dansereau et al., 2016) rather than strictly BBM
@@ -68,16 +58,16 @@
       !
       rn_kth        = 25.92E6         !     constant for healing of damage [K.s] (Olason et al.,2022 => 15 days for 20 K)
       !                               !     => 15 * 3600s * 24 * 20K
-      nn_nbbm       = 180             ! 4s with DT=720s    number of BBM subcycles
+      nn_nbbm       = 180             !     number of BBM subcycles
       !
-      nn_d_adv      = 3               !     advection of damage @T & @F
+      nn_d_adv      = 4               !     advection of damage @T & @F
       !                               !        = 0 no advection at all!
       !                               !        = 1 advection of damage only at big time step
       !                               !        = 2 advection of damage + stress tensor components at big time step
-      !                               !        = 3 advection of damage + stress tensor components + consider "upper-convected time" terms (tensor advection)
-      !                               !            at big time step
+      !                               !        = 3 advection of damage + stress tensor components + consider "lower-convected" terms in tensor advection
+      !                               !        = 4 advection of damage + stress tensor components + consider "upper-convected" terms in tensor advection
       !                               !
-      rn_crndg      = 0.01   !1/4 deg ! Cross-Nudging coefficient [s**-1]
+      rn_crndg      = 2.              ! Cross-Nudging coefficient [-]
       !                               !
       rn_dmg_max     = 0.9999999      !     upper-bound value to cap the damage to ! (~ 1 - eps )
       rn_C0          = -20.           ! compaction parameter "C" (Hibler's exponential)                              =  -20.
@@ -95,19 +85,14 @@
 !------------------------------------------------------------------------------
 &namdyn_adv     !   Ice advection
 !------------------------------------------------------------------------------
-   ln_adv_Pra       = .true.          !  Advection scheme (Prather)
-   ln_adv_UMx       = .false.  !lolo  !  Advection scheme (Ultimate-Macho)
-      nn_UMx        =   5             !     order of the scheme for UMx (1-5 ; 20=centered 2nd order)
 /
 !------------------------------------------------------------------------------
 &namsbc         !   Ice surface boundary conditions
 !------------------------------------------------------------------------------
-   rn_cio           =   5.2e-03       !  ice-ocean drag coefficient (-)
 /
 !------------------------------------------------------------------------------
 &namthd         !   Ice thermodynamics
 !------------------------------------------------------------------------------
-   ln_icedA         = .true.        !lolo: "Bitz et al" a virer car `virtula_itd` should do the job(van Copenol, private communication)  !  activate lateral melting param. (T) or not (F)
 /
 !------------------------------------------------------------------------------
 &namthd_zdf     !   Ice heat diffusion
@@ -128,12 +113,6 @@
 !------------------------------------------------------------------------------
 &namthd_pnd     !   Melt ponds
 !------------------------------------------------------------------------------
-   ln_pnd            = .false. !lolo  !  activate melt ponds or not
-      ln_pnd_TOPO    = .false.        !  topographic melt ponds
-      ln_pnd_LEV     = .false. !lolo  !  level ice melt ponds
-         rn_apnd_min =   0.15         !     minimum meltwater fraction contributing to pond growth (TOPO and LEV)
-         rn_apnd_max =   0.85         !     maximum meltwater fraction contributing to pond growth (TOPO and LEV)
-         rn_pnd_flush=   0.1          !     pond flushing efficiency (tuning parameter) (LEV)/
 /
 !------------------------------------------------------------------------------
 &namini         !   Ice initialization

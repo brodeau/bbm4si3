@@ -178,20 +178,20 @@ MODULE ice
    REAL(wp), PUBLIC ::   rn_E0            !: Elasticity of undamaged ice [Pa]
    REAL(wp), PUBLIC ::   rn_eta0          !: Viscosity of Undamaged ice [Pa.s]
    REAL(wp), PUBLIC ::   rn_kth           !: healing constant [Eq.30 of Olason et al.,2022]
-   INTEGER , PUBLIC ::   nn_d_adv         !: advection of damage @T & @F: none (0); at big time step (1); stress tensor as well (>1)
+   INTEGER , PUBLIC ::   nn_d_adv         !: advection of damage and stress tensor @T and @F
    !
    REAL(wp), PUBLIC ::   rn_crndg                !: cross-nudging coefficient ... #bbm
    LOGICAL,  PUBLIC ::   ln_boost_CN_coast       !: If true, boosts the CN at the coastline
    REAL(wp), PUBLIC ::   rn_max_CN_coast         !: Maximum value the CN coefficient should reach at the coast
    LOGICAL,  PUBLIC ::   ln_boost_CN_high_dmg    !: If true, boosts the CN where damage is high
-   REAL(wp), PUBLIC ::   rn_max_CN_dmg           !: maximum value the CN coefficient should reach when boost is needed   
+   REAL(wp), PUBLIC ::   rn_max_CN_dmg           !: maximum value the CN coefficient should reach when boost is needed
    !
    REAL(wp), PUBLIC ::   rn_dmg_max       !: max value possible for capping damage (~1-eps)
    REAL(wp), PUBLIC ::   rn_C0            !: compaction parameter "C" (Hibler's exponential)                                         =  -20.
    REAL(wp), PUBLIC ::   rn_alrlx         !: `alpha` inherent to viscosity, Eq.10 of [Olason al.2022], used by Dansereau             =   5.
    REAL(wp), PUBLIC ::   rn_btrlx         !: `beta`: sort of an `alpha` to go in the exp[] of `lambda`, used by Olason   Boutin      =   5.
    REAL(wp), PUBLIC ::   rn_c_ref         !: Cohesion value at the lab scale                                                         = 2.E6
-   REAL(wp), PUBLIC ::   rn_l_ref         !: scaling paramater for cohesion, `l_ref` in [Eq.30 of Olason et al.,2022]   
+   REAL(wp), PUBLIC ::   rn_l_ref         !: scaling paramater for cohesion, `l_ref` in [Eq.30 of Olason et al.,2022]
    LOGICAL,  PUBLIC ::   ln_damaged_E     !: Use damaged elasticity in MC test (propagation speed of elastic waves)
    LOGICAL,  PUBLIC ::   ln_tame_ini_ws   !: Gently increase the wind stress from zero to expected value when cold-starting an experiment
    REAL(wp), PUBLIC ::   rn_half_tame     !: delay, in hours, at which half of the above taming is completed
@@ -603,7 +603,7 @@ CONTAINS
             &      STAT = ierr(ii) )
       END IF
       !#BBM.
-      
+
       ice_alloc = MAXVAL( ierr(:) )
       IF( ice_alloc /= 0 )   CALL ctl_stop( 'STOP', 'ice_alloc: failed to allocate arrays.' )
       !

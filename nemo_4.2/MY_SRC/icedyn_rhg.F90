@@ -25,7 +25,7 @@ MODULE icedyn_rhg
    USE lib_mpp        ! MPP library
    USE lib_fortran    ! fortran utilities (glob_sum + no signed zero)
    USE timing         ! Timing
-   
+
    IMPLICIT NONE
    PRIVATE
 
@@ -92,9 +92,9 @@ CONTAINS
          !                             !----------------------------!
          CALL ice_dyn_rhg_eap( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i, delta_i, aniso_11, aniso_12, rdg_conv )
          !
-         !                             !-------------------------! 
+         !                             !-------------------------!
       CASE( np_rhgBBM )                ! Brittle Bingham Maxwell !
-         !                             !-------------------------!         
+         !                             !-------------------------!
          CALL ice_dyn_rhg_bbm( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i, delta_i )
          !
       END SELECT
@@ -167,18 +167,20 @@ CONTAINS
          IF( ln_rhg_BBM ) THEN
             IF(.NOT.ln_damage) CALL ctl_stop( 'ice_dyn_rhg_init: BBM rheology => set `ln_damage=.true` in `nampar`' )
             WRITE(numout,*) '    rheology BBM (icedyn_rhg_bbm)                          ln_rhg_BBM    = ', ln_rhg_BBM !#bbm
-            IF(ln_MEB) WRITE(numout,*) '         will use the MEB rheology variant rather than pure BBM!' 
+            IF(ln_MEB) WRITE(numout,*) '         will use the MEB rheology variant rather than pure BBM!'
             WRITE(numout,*) '         max. compressive stress at the ref. scale [Pa]    rn_Nref       = ', rn_Nref  !#bbm
             WRITE(numout,*) '         elasticity of undamaged ice [Pa]                  rn_E0         = ', rn_E0  !#bbm
             WRITE(numout,*) '         viscosity of undamaged ice  [Pa.s]                rn_eta0       = ', rn_eta0  !#bbm
-            IF(.NOT.ln_MEB ) WRITE(numout,*) '         compression factor "P" at play in "P_max"         rn_P0         = ', rn_P0  !#bbm            
+            IF(.NOT.ln_MEB ) WRITE(numout,*) '         compression factor "P" at play in "P_max"         rn_P0         = ', rn_P0  !#bbm
             WRITE(numout,*) '         healing constant for damage                       rn_kth        = ', rn_kth  !#bbm
             WRITE(numout,*) '         number of iterations for subcycling               nn_nbbm       = ', nn_nbbm !#bbm
             WRITE(numout,*) '         advection of damage and stresses @T & @F          nn_d_adv  = ', nn_d_adv !#bbm
             IF( nn_d_adv==0 ) WRITE(numout,*) '           => no advection at all!' !#bbm
             IF( nn_d_adv==1 ) WRITE(numout,*) '           => advection of damage only' !#bbm
-            IF( nn_d_adv >1 ) WRITE(numout,*) '           => advection of damage and stresses' !#bbm
-            IF( nn_d_adv==3 ) WRITE(numout,*) '             ==> add "upper-convected time" terms in tensor advection' !#bbm
+            IF( nn_d_adv >1 ) WRITE(numout,*) '           => advection of damage + stress tensors' !#bbm
+            IF( nn_d_adv==3 ) WRITE(numout,*) '             ==> add "lower-convected" term in tensor advection' !#bbm
+            IF( nn_d_adv==4 ) WRITE(numout,*) '             ==> add "upper-convected" term in tensor advection' !#bbm
+            IF( nn_d_adv >4 ) CALL ctl_stop( 'ice_dyn_rhg_init: valid choices for `nn_d_adv` span 0 to 4' )
             WRITE(numout,*) '         cross-nudging coeff. for stress tensor            rn_crndg      = ', rn_crndg !#bbm
             IF(rn_crndg>0._wp) THEN
                WRITE(numout,*) '      => boost the CN at the coastline?             ln_boost_CN_coast = ', ln_boost_CN_coast
@@ -207,7 +209,7 @@ CONTAINS
          WRITE(numout,*) '      rheology EAP (icedyn_rhg_eap)                        ln_rhg_EAP = ', ln_rhg_EAP
       ENDIF
       !
-      
+
       !                             !== set the choice of ice advection ==!
       ioptio = 0
       IF( ln_rhg_EVP ) THEN   ;   ioptio = ioptio + 1   ;   nice_rhg = np_rhgEVP    ;   ENDIF
@@ -218,7 +220,7 @@ CONTAINS
       !
       IF( ln_rhg_EVP  )   CALL rhg_evp_rst( 'READ' )  !* read or initialize all required files
       IF( ln_rhg_EAP  )   CALL rhg_eap_rst( 'READ' )  !* read or initialize all required files
-      
+
       IF( ln_rhg_BBM  ) THEN
          CALL ice_dyn_rhg_bbm_init() !* allocation of BBM-specific arrays (LB: needs to be done before reading restarts...)
          CALL rhg_bbm_rst( 'READ' )  !* read or initialize all required files

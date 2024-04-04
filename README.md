@@ -19,6 +19,10 @@ the `MY_SRC` directory of the NEMO configuration you wish to run (*i.e.* under
 found in the `MY_SRC` will overwrite those of the NEMO version you are using.
 
 
-No-slip conditions must be used at the coast! Not only for SI3 but also for OPA !!!
+### Limitations (as of now)
 
-L. Brodeau, January 2024
+- No-slip conditions must be used at the coast! Not only for SI3 but also for OPA !!!
+
+- BDY is not ready yet!
+
+L. Brodeau, April 2024
