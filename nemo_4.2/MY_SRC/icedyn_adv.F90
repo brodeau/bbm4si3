@@ -85,7 +85,7 @@ CONTAINS
       INTEGER, INTENT(in) ::   kt   ! number of iteration
       REAL(wp), DIMENSION(jpi,jpj) :: zdudx, zdvdy, zdudy, zdvdx, zdiv  !#bbm
       REAL(wp), DIMENSION(jpi,jpj) :: zdmg_pos, zs11_pos, zs22_pos, zs12_pos  !#bbm
-      REAL(wp), DIMENSION(jpi,jpj) :: zs11t_b, zs22t_b, zs12t_b, zs11f_b, zs22f_b, zs12f_b
+      REAL(wp), DIMENSION(jpi,jpj) :: zs11_ci, zs22_ci, zs12_ci ! increments for extra upper- or lower-convected terms...
       REAL(wp)                     :: zm1t, zm1f,zm2t, zm2f
       REAL(wp)                     :: z_skk_ao, z_s12_ao
       !!---------------------------------------------------------------------
@@ -124,16 +124,6 @@ CONTAINS
          IF( nn_d_adv >= 1 ) THEN
 
             IF( l_advct_stresses ) THEN
-
-               IF( l_advct_oldroyd ) THEN
-                  !! Need to backup stress tensors before they are modified through the usual material-derivative:
-                  zs11t_b(:,:) = sgm11t(:,:)
-                  zs22t_b(:,:) = sgm22t(:,:)
-                  zs12t_b(:,:) = sgm12t(:,:)
-                  zs11f_b(:,:) = sgm11f(:,:)
-                  zs22f_b(:,:) = sgm22f(:,:)
-                  zs12f_b(:,:) = sgm12f(:,:)
-               ENDIF
 
                !! 1st, find the maximum values to pick an `add_offset` !
                !! for `skk` we nultiply it by `-1` so negative values will be smaller (normally: `HUGE_NEG_VAL < skk < SMALL_POS_VAL` )
@@ -183,14 +173,42 @@ CONTAINS
                IF(lwp) WRITE(numout,'("  *** advects only damage @T with Prather, kt=",i5.5)') kt
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos )
             ENDIF
-            !
-            ! Fall back after advection:
+
+            !! Fall back after advection:
             dmgt   = (1._wp - zdmg_pos)
             CALL cap_damage( 'T', 'ice_dyn_adv', dmgt )
-            sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt
-            sgm22t = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt
-            sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt
-
+            
+            IF( l_advct_stresses ) THEN
+               !! Computing increments for extra upper- or lower-convected terms if requested:
+               zs11_ci(:,:) = 0._wp
+               zs22_ci(:,:) = 0._wp
+               zs12_ci(:,:) = 0._wp
+               IF( l_advct_oldroyd ) THEN
+                  !!  => all `*_pos` arrays used as temporary arrays here!
+                  CALL strain_rate( 'T', u_ice, v_ice, uVice, vUice, &
+                     &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, e1t*e1t, e2t*e2t, tmask(:,:,1), &
+                     &              zdudx, zdvdy, zdmg_pos, lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
+                  IF(nn_d_adv==3) THEN
+                     IF(lwp) WRITE(numout,'("  *** Going for LOWER-CONVECTED advection term, kt=",i5.5)') kt
+                     CALL lower_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, sgm11t,  sgm22t,  sgm12t, &
+                        &                                                              zs11_ci, zs22_ci, zs12_ci )
+                  ELSEIF(nn_d_adv==4) THEN
+                     IF(lwp) WRITE(numout,'("  *** Going for UPPER-CONVECTED advection term, kt=",i5.5)') kt
+                     CALL upper_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, sgm11t,  sgm22t,  sgm12t, &
+                        &                                                              zs11_ci, zs22_ci, zs12_ci )
+                  ENDIF
+               ELSE
+                  IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i5.5)') kt
+               END IF !IF( l_advct_oldroyd )
+               
+               !! Fall back after advection (and add upper- or lower-convected contrib if needed):
+               sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt  + zs11_ci
+               sgm22t = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt  + zs22_ci
+               sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt  + zs12_ci
+               
+            ENDIF !IF( l_advct_stresses )
+               
+            
 
             !! Advect at F points with u@V, v@U velocities
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -218,48 +236,37 @@ CONTAINS
                IF(lwp) WRITE(numout,'("  *** advects only damage @F with Prather, kt=",i5.5)') kt
                CALL ice_dyn_adv_pra_f_d( kt, uVice, vUice,  zdmg_pos )
             ENDIF
-
+            
             ! Fall back after advection:
             dmgf   = (1._wp - zdmg_pos)
             CALL cap_damage( 'F', 'ice_dyn_adv', dmgf )
-            sgm11f = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf
-            sgm22f = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf
-            sgm12f = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf
-
-            IF( l_advct_oldroyd ) THEN
-               !!
-               CALL strain_rate( 'T', u_ice, v_ice, uVice, vUice, &
-                  &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, e1t*e1t, e2t*e2t, tmask(:,:,1), &
-                  &              zdudx, zdvdy, zdmg_pos, lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
-               !!                         =>  `zdmg_pos` used for receiving the shear, which is not used anyway...
-               IF(nn_d_adv==3) THEN
-                  IF(lwp) WRITE(numout,'("  *** Going for LOWER-CONVECTED advection term, kt=",i5.5)') kt
-                  CALL add_lower_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, zs11t_b, zs22t_b, zs12t_b, &
-                     &                                                              sgm11t,  sgm22t,  sgm12t    )
+            
+            IF( l_advct_stresses ) THEN
+               !! Computing increments for extra upper- or lower-convected terms if requested:
+               zs11_ci(:,:) = 0._wp
+               zs22_ci(:,:) = 0._wp
+               zs12_ci(:,:) = 0._wp
+               IF( l_advct_oldroyd ) THEN
+                  !!  => all `*_pos` arrays used as temporary arrays here!
+                  CALL strain_rate( 'F', uVice, vUice, u_ice, v_ice, &
+                     &              r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, e1f*e1f, e2f*e2f, fmask(:,:,1), &
+                     &              zdudx, zdvdy, zdmg_pos,  lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
+                  IF(nn_d_adv==3) THEN
+                     CALL lower_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf, sgm11f,  sgm22f,  sgm12f, &
+                        &                                                              zs11_ci, zs22_ci, zs12_ci )
+                  ELSEIF(nn_d_adv==4) THEN
+                     CALL upper_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf, sgm11f,  sgm22f,  sgm12f, &
+                        &                                                              zs11_ci, zs22_ci, zs12_ci )
+                  ENDIF
                ENDIF
-               IF(nn_d_adv==4) THEN
-                  IF(lwp) WRITE(numout,'("  *** Going for UPPER-CONVECTED advection term, kt=",i5.5)') kt
-                  CALL add_upper_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, zs11t_b, zs22t_b, zs12t_b, &
-                     &                                                              sgm11t,  sgm22t,  sgm12t    )
-               ENDIF
-               !!
-               CALL strain_rate( 'F', uVice, vUice, u_ice, v_ice, &
-                  &              r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, e1f*e1f, e2f*e2f, fmask(:,:,1), &
-                  &              zdudx, zdvdy, zdmg_pos,  lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
-               !!                         =>  `zdmg_pos` used for receiving the shear, which is not used anyway...
-               IF(nn_d_adv==3) THEN
-                  CALL add_lower_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf, zs11f_b, zs22f_b, zs12f_b, &
-                     &                                                              sgm11f,  sgm22f,  sgm12f    )
-               ENDIF
-               IF(nn_d_adv==4) THEN
-                  CALL add_upper_advected( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskf, zs11f_b, zs22f_b, zs12f_b, &
-                     &                                                              sgm11f,  sgm22f,  sgm12f    )
-               ENDIF
-
-            ELSE
-               IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i5.5)') kt
-            END IF !IF( l_advct_oldroyd )
-
+               
+               !! Fall back after advection (and add upper- or lower-convected contrib if needed):
+               sgm11f = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf  + zs11_ci
+               sgm22f = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf  + zs22_ci
+               sgm12f = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf  + zs12_ci
+               
+            END IF !IF( l_advct_stresses )
+            
             CALL clean_small_a_sgm( 'T', at_i, a_f,  sgm11t, sgm22t, sgm12f )
             CALL clean_small_a_sgm( 'F', at_i, a_f,  sgm11f, sgm22f, sgm12t )
 
@@ -344,26 +351,25 @@ CONTAINS
       !
    END SUBROUTINE ice_dyn_adv_init
 
-
-   SUBROUTINE add_lower_advected( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11b, ps22b, ps12b,  ps11, ps22, ps12 )
-      REAL(wp), DIMENSION(:,:), INTENT(in)    :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
-      REAL(wp), DIMENSION(:,:), INTENT(in)    :: ps11b, ps22b, ps12b ! tensor components before any form of advection
-      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11, ps22, ps12    ! tensor components that have undegone material-derivative adv
+   SUBROUTINE lower_convected_inc( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11, ps22, ps12,  pinc11, pinc22, pinc12 )
+      REAL(wp), DIMENSION(:,:), INTENT(in)  :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
+      REAL(wp), DIMENSION(:,:), INTENT(in)  :: ps11, ps22, ps12 ! tensor components before any form of advection
+      REAL(wp), DIMENSION(:,:), INTENT(out) :: pinc11, pinc22, pinc12  ! lower-convected contribution increment 
       !! Lower-convected version (sign is inversed because moved from LHS to RHS):
-      ps11(:,:) = ps11(:,:) - 2._wp*rDt_ice*( pdudx(:,:)*ps11b(:,:) + pdvdx(:,:)*ps12b(:,:) )*zmsk(:,:)
-      ps22(:,:) = ps22(:,:) - 2._wp*rDt_ice*( pdvdy(:,:)*ps22b(:,:) + pdudy(:,:)*ps12b(:,:) )*zmsk(:,:)
-      ps12(:,:) = ps12(:,:) - rDt_ice*( pdiv(:,:)*ps12b(:,:) + pdudy(:,:)*ps11b(:,:) + pdvdx(:,:)*ps22b(:,:) )*zmsk(:,:)
-   END SUBROUTINE add_lower_advected
+      pinc11(:,:) = -2._wp*rDt_ice*( pdudx(:,:)*ps11(:,:) + pdvdx(:,:)*ps12(:,:) )*zmsk(:,:)
+      pinc22(:,:) = -2._wp*rDt_ice*( pdvdy(:,:)*ps22(:,:) + pdudy(:,:)*ps12(:,:) )*zmsk(:,:)
+      pinc12(:,:) = -rDt_ice*( pdiv(:,:)*ps12(:,:) + pdudy(:,:)*ps11(:,:) + pdvdx(:,:)*ps22(:,:) )*zmsk(:,:)
+   END SUBROUTINE lower_convected_inc
 
-   SUBROUTINE add_upper_advected( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11b, ps22b, ps12b,  ps11, ps22, ps12 )
-      REAL(wp), DIMENSION(:,:), INTENT(in)    :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
-      REAL(wp), DIMENSION(:,:), INTENT(in)    :: ps11b, ps22b, ps12b ! tensor components before any form of advection
-      REAL(wp), DIMENSION(:,:), INTENT(inout) :: ps11, ps22, ps12    ! tensor components that have undegone material-derivative adv
+   SUBROUTINE upper_convected_inc( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11, ps22, ps12,  pinc11, pinc22, pinc12 )
+      REAL(wp), DIMENSION(:,:), INTENT(in)  :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
+      REAL(wp), DIMENSION(:,:), INTENT(in)  :: ps11, ps22, ps12 ! tensor components before any form of advection
+      REAL(wp), DIMENSION(:,:), INTENT(out) :: pinc11, pinc22, pinc12  ! lower-convected contribution increment
       !! Upper-convected version (sign is inversed because moved from LHS to RHS):
-      ps11(:,:) = ps11(:,:) + 2._wp*rDt_ice*( pdudx(:,:)*ps11b(:,:) + pdudy(:,:)*ps12b(:,:) )*zmsk(:,:)
-      ps22(:,:) = ps22(:,:) + 2._wp*rDt_ice*( pdvdy(:,:)*ps22b(:,:) + pdvdx(:,:)*ps12b(:,:) )*zmsk(:,:)
-      ps12(:,:) = ps12(:,:) + rDt_ice*( pdiv(:,:)*ps12b(:,:) + pdudy(:,:)*ps22b(:,:) + pdvdx(:,:)*ps11b(:,:) )*zmsk(:,:)
-   END SUBROUTINE add_upper_advected
+      pinc11(:,:) =   2._wp*rDt_ice*( pdudx(:,:)*ps11(:,:) + pdudy(:,:)*ps12(:,:) )*zmsk(:,:)
+      pinc22(:,:) =   2._wp*rDt_ice*( pdvdy(:,:)*ps22(:,:) + pdvdx(:,:)*ps12(:,:) )*zmsk(:,:)
+      pinc12(:,:) =   rDt_ice*( pdiv(:,:)*ps12(:,:) + pdudy(:,:)*ps22(:,:) + pdvdx(:,:)*ps11(:,:) )*zmsk(:,:)
+   END SUBROUTINE upper_convected_inc
 
 
 #else
