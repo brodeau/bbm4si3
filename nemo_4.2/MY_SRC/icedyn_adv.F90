@@ -124,7 +124,6 @@ CONTAINS
          IF( nn_d_adv >= 1 ) THEN
 
             IF( l_advct_stresses ) THEN
-
                !! 1st, find the maximum values to pick an `add_offset` !
                !! for `skk` we nultiply it by `-1` so negative values will be smaller (normally: `HUGE_NEG_VAL < skk < SMALL_POS_VAL` )
                zm1t = MAXVAL( sgm11t(:,:)*r_sgm_sf*xmskt(:,:) )
@@ -150,34 +149,37 @@ CONTAINS
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             ! Transform before advection:
-            zdmg_pos =      (1._wp - dmgt)           * xmskt  ! cleaner to advect `1-d` rather than `d`...
-            zs11_pos = (-sgm11t*r_sgm_sf + z_skk_ao) * xmskt
-            zs22_pos = (-sgm22t*r_sgm_sf + z_skk_ao) * xmskt
-            zs12_pos = ( sgm12t*r_sgm_sf + z_s12_ao) * xmskt
-            !
-            IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
-               WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
-               WRITE(numout,*) ' *** Min val for `zs22_pos`:', MINVAL(zs22_pos)
-               CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_ii @T still has negative value(s)!!!')
-            ENDIF
-            IF( ANY(zs12_pos<0._wp) ) THEN
-               WRITE(numout,*) ' *** Min val for `zs12_pos`:', MINVAL(zs12_pos)
-               CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @T still has negative value(s)!!!')
-            ENDIF
+            zdmg_pos = (1._wp - dmgt) * xmskt  ! cleaner to advect `1-d` rather than `d`...
 
             IF( l_advct_stresses ) THEN
+               ! Transform before advection:
+               zs11_pos = (-sgm11t*r_sgm_sf + z_skk_ao) * xmskt
+               zs22_pos = (-sgm22t*r_sgm_sf + z_skk_ao) * xmskt
+               zs12_pos = ( sgm12t*r_sgm_sf + z_s12_ao) * xmskt
+               !!
+               IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
+                  WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
+                  WRITE(numout,*) ' *** Min val for `zs22_pos`:', MINVAL(zs22_pos)
+                  CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_ii @T still has negative value(s)!!!')
+               ENDIF
+               IF( ANY(zs12_pos<0._wp) ) THEN
+                  WRITE(numout,*) ' *** Min val for `zs12_pos`:', MINVAL(zs12_pos)
+                  CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @T still has negative value(s)!!!')
+               ENDIF
+               !!
                IF(lwp) WRITE(numout,'("  *** advects damage & stresses @T with Prather, kt=",i5.5)') kt
                IF(lwp) WRITE(numout,'("      ==> offset for `skk` and `s12`: ",f6.2,", ",f6.2)') z_skk_ao, z_s12_ao
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos, pdd1=zs12_pos, pdd2=zs11_pos, pdd3=zs22_pos )
             ELSE
+               !!
                IF(lwp) WRITE(numout,'("  *** advects only damage @T with Prather, kt=",i5.5)') kt
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos )
-            ENDIF
+            ENDIF !IF( l_advct_stresses )
 
             !! Fall back after advection:
             dmgt   = (1._wp - zdmg_pos)
             CALL cap_damage( 'T', 'ice_dyn_adv', dmgt )
-            
+
             IF( l_advct_stresses ) THEN
                !! Computing increments for extra upper- or lower-convected terms if requested:
                zs11_ci(:,:) = 0._wp
@@ -200,47 +202,50 @@ CONTAINS
                ELSE
                   IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i5.5)') kt
                END IF !IF( l_advct_oldroyd )
-               
+
                !! Fall back after advection (and add upper- or lower-convected contrib if needed):
                sgm11t = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt  + zs11_ci
                sgm22t = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt  + zs22_ci
                sgm12t = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt  + zs12_ci
-               
+
             ENDIF !IF( l_advct_stresses )
-               
-            
+
+
 
             !! Advect at F points with u@V, v@U velocities
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             ! Transform before advection:
             zdmg_pos = (1._wp - dmgf)                * xmskf
-            zs11_pos = (-sgm11f*r_sgm_sf + z_skk_ao) * xmskf
-            zs22_pos = (-sgm22f*r_sgm_sf + z_skk_ao) * xmskf
-            zs12_pos = ( sgm12f*r_sgm_sf + z_s12_ao) * xmskf
-            !
-            IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
-               WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
-               WRITE(numout,*) ' *** Min val for `zs22_pos`:', MINVAL(zs22_pos)
-               CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_ii @F still has negative value(s)!!!')
-            ENDIF
-            IF( ANY(zs12_pos<0._wp) ) THEN
-               WRITE(numout,*) ' *** Min val for `zs12_pos`:', MINVAL(zs12_pos)
-               CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @F still has negative value(s)!!!')
-            ENDIF
-            !
+
             IF( l_advct_stresses ) THEN
+               ! Transform before advection:
+               zs11_pos = (-sgm11f*r_sgm_sf + z_skk_ao) * xmskf
+               zs22_pos = (-sgm22f*r_sgm_sf + z_skk_ao) * xmskf
+               zs12_pos = ( sgm12f*r_sgm_sf + z_s12_ao) * xmskf
+               !!
+               IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
+                  WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
+                  WRITE(numout,*) ' *** Min val for `zs22_pos`:', MINVAL(zs22_pos)
+                  CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_ii @F still has negative value(s)!!!')
+               ENDIF
+               IF( ANY(zs12_pos<0._wp) ) THEN
+                  WRITE(numout,*) ' *** Min val for `zs12_pos`:', MINVAL(zs12_pos)
+                  CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @F still has negative value(s)!!!')
+               ENDIF
+               !!
                IF(lwp) WRITE(numout,'("  *** advects damage & stresses @F with Prather, kt=",i5.5)') kt
                CALL ice_dyn_adv_pra_f_d( kt, uVice, vUice,  zdmg_pos, pdd1=zs12_pos, pdd2=zs11_pos, pdd3=zs22_pos )
             ELSE
+               !!
                IF(lwp) WRITE(numout,'("  *** advects only damage @F with Prather, kt=",i5.5)') kt
                CALL ice_dyn_adv_pra_f_d( kt, uVice, vUice,  zdmg_pos )
-            ENDIF
-            
+            ENDIF !IF( l_advct_stresses )
+
             ! Fall back after advection:
             dmgf   = (1._wp - zdmg_pos)
             CALL cap_damage( 'F', 'ice_dyn_adv', dmgf )
-            
+
             IF( l_advct_stresses ) THEN
                !! Computing increments for extra upper- or lower-convected terms if requested:
                zs11_ci(:,:) = 0._wp
@@ -259,14 +264,14 @@ CONTAINS
                         &                                                              zs11_ci, zs22_ci, zs12_ci )
                   ENDIF
                ENDIF
-               
+
                !! Fall back after advection (and add upper- or lower-convected contrib if needed):
                sgm11f = (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf  + zs11_ci
                sgm22f = (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf  + zs22_ci
                sgm12f = (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf  + zs12_ci
-               
+
             END IF !IF( l_advct_stresses )
-            
+
             CALL clean_small_a_sgm( 'T', at_i, a_f,  sgm11t, sgm22t, sgm12f )
             CALL clean_small_a_sgm( 'F', at_i, a_f,  sgm11f, sgm22f, sgm12t )
 
@@ -354,7 +359,7 @@ CONTAINS
    SUBROUTINE lower_convected_inc( pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk, ps11, ps22, ps12,  pinc11, pinc22, pinc12 )
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: pdudx, pdudy, pdvdx, pdvdy, pdiv, zmsk
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: ps11, ps22, ps12 ! tensor components before any form of advection
-      REAL(wp), DIMENSION(:,:), INTENT(out) :: pinc11, pinc22, pinc12  ! lower-convected contribution increment 
+      REAL(wp), DIMENSION(:,:), INTENT(out) :: pinc11, pinc22, pinc12  ! lower-convected contribution increment
       !! Lower-convected version (sign is inversed because moved from LHS to RHS):
       pinc11(:,:) = -2._wp*rDt_ice*( pdudx(:,:)*ps11(:,:) + pdvdx(:,:)*ps12(:,:) )*zmsk(:,:)
       pinc22(:,:) = -2._wp*rDt_ice*( pdvdy(:,:)*ps22(:,:) + pdudy(:,:)*ps12(:,:) )*zmsk(:,:)
