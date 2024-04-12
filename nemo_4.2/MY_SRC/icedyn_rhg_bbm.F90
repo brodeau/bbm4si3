@@ -91,7 +91,7 @@ CONTAINS
       !!-------------------------------------------------------------------
       INTEGER  ::   ji, jj     ! dummy loop indices
       INTEGER  ::   ierror
-      REAL(wp) :: zr, zce, zdts
+      REAL(wp) :: zr, zdx_m, zce, zdts
       REAL(wp), DIMENSION(:,:), ALLOCATABLE :: zt1, zt2, zt3, zt4
       INTEGER :: jm
       !!-------------------------------------------------------------------
@@ -101,8 +101,10 @@ CONTAINS
          WRITE(numout,*) '    *** Initialization of BBM rheology (ice_dyn_rhg_bbm_init) ***'
       ENDIF
 
-      r_i_do_bbm = 1._wp
-      IF( ln_MEB ) r_i_do_bbm = 0._wp
+      !r_i_do_bbm = 1._wp
+      !IF( ln_MEB ) r_i_do_bbm = 0._wp
+      IF( ln_MEB ) CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: add MEB to the code !!!!')
+      
       rz_alfm1 = rn_alrlx - 1._wp
       rz_betm1 = rn_btrlx - 1._wp
 
@@ -197,17 +199,22 @@ CONTAINS
 
       ENDIF !IF( l_CN )
 
-      !! Going to use a constant `dx`:
+      !! Grid resolution for T- and F-centric cells:
       Xdxt(:,:) = 0._wp ; Xdxf(:,:) = 0._wp
       Xdxt(:,:) = SQRT( e1t(:,:)*e2t(:,:) )  ! Local `dx` of grid cell [m]
       Xdxf(:,:) = SQRT( e1f(:,:)*e2f(:,:) )  ! Local `dx` of grid cell [m]
-      zr = SUM(Xdxt(:,:)*xmskt(:,:)) / MAX( SUM(xmskt(:,:)) , reps6 )
+
+      !! A typical `dx` for the full domain:
+      zdx_m = SUM(Xdxt(:,:)*xmskt(:,:)) / MAX( SUM(xmskt(:,:)) , reps6 ) ; ! => mean `dx` on this proc domain!
+      CALL mpp_sum( 'ice_dyn_rhg_bbm_init', zdx_m)
+      zdx_m = zdx_m / REAL(jpnij)  ; ! => mean `dx` of full computational domain
+      
       zce = rsqrt_E0 / rsqrt_nu_rhoi ! propagation speed of shearing elastic waves based on the mean `dx`
-      zdts = 0.5_wp*(zr/zce)        ! largest possible small time-step to consider...
+      zdts = 0.5_wp*(zdx_m/zce)        ! largest possible small time-step to consider...
 
       IF( lwp ) THEN
          WRITE(numout,*) '  * Big time step (advection & thermo)  => rdt_ice  =', rdt_ice, ' [s]'
-         WRITE(numout,*) '  * Average `dx` of domain => ', REAL(zr/1000._wp,4), ' [km]'
+         WRITE(numout,*) '  * Average `dx` of full computational domain => ', REAL(zdx_m/1000._wp,4), ' [km]'
          WRITE(numout,*) '     ==> propagation speed of shearing elastic waves =>',  zce, '[m/s]'
          WRITE(numout,*) '     ==> the small time-step should therefore be about or below:', zdts, ' [s]'
          WRITE(numout,*) '     ==> that would the case with a `nbbm` >',INT(rdt_ice/zdts,1)
@@ -1030,19 +1037,15 @@ CONTAINS
       REAL(wp), DIMENSION(:,:), INTENT(out) :: plamb       ! Ice viscous time scale [s]
       REAL(wp), DIMENSION(:,:), INTENT(out) :: pmult       ! Multiplicator for stress tensor update
       !!
-      REAL(wp) :: zA, z1mA, zxpC, zsigI, zPmax, zc0, zc1, zPtld, zdmg, z1md, zE, zeta, zlamb
-      REAL(wp) :: zsigII, zang, zcoeff
+      REAL(wp) :: zxpC, zsigI, zPmax, zc0, zPtld, z1md, zE, zeta, zlamb
+      REAL(wp) :: z1_zsigI, zsigII, zang
       INTEGER  :: ji, jj
 
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
 
-            zA   = pA(ji,jj)
-            z1mA = 1._wp - zA
+            zxpC = EXP( rn_C0*(1._wp - pA(ji,jj)) )  ! `expC` [Eq.8]
 
-            zxpC = EXP( rn_C0*z1mA )  ! `expC` [Eq.8]
-
-            zdmg = pdmg(ji,jj)
-            z1md = 1._wp - zdmg
+            z1md = 1._wp - pdmg(ji,jj)
 
             !! Elasticity [Pa]:
             !!    *** BBM and MEB:
@@ -1054,38 +1057,23 @@ CONTAINS
             !!       * V = V0 * (1 - d)**a * exp[-C*(1-A)]  (viscosity)
             !!    *** BBM (Olason et al. 2022) [Eq.10/Eq.9]:
             !!       *    V = V0 * (1 - d)**a * exp[b*-C*(1-A)]    (with b=a in Olason et al. 2022)
-            zeta = rn_eta0 * z1md**rn_alrlx * zxpC**(r_i_do_bbm*rn_btrlx)
+            zeta = rn_eta0 * z1md**rn_alrlx * zxpC**rn_btrlx
 
             zlamb = zeta / MAX( zE, reps24 )  ! time-scale for viscous relaxation
             zlamb = MAX( zlamb, rlamb_min )
 
-            zPmax = 9999._wp  !DEBUG flags for `dbg` blabla
-            zPtld = 9999._wp  !     //
+            zsigI  = 0.5_wp * ( ps11(ji,jj) + ps22(ji,jj) ) ! sigI: normal stress aka first invariant
+            zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
 
-            zsigI = 0.5_wp * ( ps11(ji,jj) + ps22(ji,jj) ) ! sigI: normal stress aka first invariant
+            z1_zsigI = SIGN( 1._wp , zsigI ) / MAX( ABS(zsigI), reps24 )   ! 1/SigI without the SigI=0 singularity...
+            
+            zang   = ATAN( zsigII * z1_zsigI )
+            zPmax = -rn_P0 * ph(ji,jj)**1.5_wp * zxpC * COS( zang )       ! `-P_max` (for sigI<0)
 
-            !! --- "multiplicator" ---
-            pmult(ji,jj) = 1._wp   ! default for when  `zPmax < zsigI < 0`
+            zc0 = 0.5_wp + SIGN( 0.5_wp, -zsigI-reps24 )           ! => if sigI<-reps24 => zc0=1 else: zc0=0
+            zPtld = zc0 * MIN( zPmax*z1_zsigI , 1._wp )
 
-            IF( (.NOT. ln_MEB).AND.(zsigI < 0._wp) ) THEN
-            !IF( zsigI < -reps24 ) THEN
-               !!
-               zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
-               zang   = ATAN( zsigII / MAX( ABS(zsigI), reps24 ) )
-               !zang   = ATAN( zsigII / ABS(zsigI) )    ! `zsigI < -reps24` by `IF()` !
-               zcoeff = COS( zang )
-               zPmax = -rn_P0 * ph(ji,jj)**1.5_wp * zxpC * zcoeff       ! `-P_max` (for sigI<0)
-               !!
-               IF( zsigI < zPmax ) THEN
-                  zPtld = zPmax/zsigI         ! Attention! it is -P~ w.r.t paper!
-                  pmult(ji,jj)  = zlamb / ( zlamb + pdt*(1._wp - zPtld) )
-               !! ELSE => pmult=1 !
-               ENDIF
-            ELSE
-               !! When zsigI> 0 or when MEB:
-            !ELSEIF( zsigI > 0._wp) THEN
-               pmult(ji,jj)  = zlamb / ( zlamb + pdt )
-            ENDIF
+            pmult(ji,jj)  = MIN( zlamb/(zlamb + pdt*(1._wp - zPtld)) , 1._wp ) ! Multiplicator term [Eq.32]
 
             pelast(ji,jj) = zE
             plamb(ji,jj) = zlamb
@@ -1106,7 +1094,7 @@ CONTAINS
       REAL(wp), DIMENSION(:,:), INTENT(inout) :: pdmg             ! damage
       !!
       REAL(wp) :: zsigI, zsigII, zMC
-      REAL(wp) :: zdcrit, zmlt, zsqrtE, zTd
+      REAL(wp) :: zdcrit, zmlt, zsqrtE, zTd, zc0, zc1, z1_zsigI, z1_zMC, zNlim, zcA, zcB
       REAL(wp) :: rEdmgd
       INTEGER  :: ji, jj
       !!
@@ -1116,6 +1104,8 @@ CONTAINS
 
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
 
+            zNlim = pNlim(ji,jj)
+      
             zdcrit = 9999._wp ; ! just for initialization
 
             zsqrtE = rEdmgd * SQRT(MAX(pE(ji,jj),reps6))   +   (1. - rEdmgd) * rsqrt_E0  ! `sqrt(E)` damaged or undamaged...
@@ -1125,22 +1115,28 @@ CONTAINS
 
             zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
 
+            z1_zsigI = SIGN( 1._wp , zsigI ) / MAX( ABS(zsigI), reps24 )   ! 1/SigI without the SigI=0 singularity...
+                        
+            zMC = zsigII + rz_muMC*zsigI                             ! Mohr-Coulomb  [Eq.29.2]
+            z1_zMC = SIGN( 1._wp , zMC ) / MAX( ABS(zMC), reps24 )   ! 1/MC without the MC=0 singularity...
+                           
+            zc0 = 0.5_wp + SIGN( 0.5_wp , zsigI + zNlim       )   ! if zsigI<-Nlim => zc0=0 ; zc0=1 otherwize            
+            zdcrit = zc0 * pcohe(ji,jj) * z1_zMC  +  (zc0-1._wp) * zNlim * z1_zsigI   ! `zc0-1` because we need `-Nlim` !
 
-            IF( (ABS(zsigI)>0.1_wp).AND.(zsigII>0.1_wp) ) THEN
+            ! Do only `!IF( (ABS(zsigI)>0.1_wp).AND.(zsigII>0.1_wp) )`:
+            zcA = 0.5_wp + SIGN( 0.5_wp , ABS(zsigI)-0.1_wp )   ! if |sigI|>0.1 => zcA=1 ; zcA=0 otherwize
+            zcB = 0.5_wp + SIGN( 0.5_wp ,     zsigII-0.1_wp )   ! if  sigII>0.1 => zcB=1 ; zcB=0 otherwize            
+            zc0 = 0.5_wp + SIGN( 0.5_wp , zdcrit       )   ! if zdcrit>0 => zc0=1 ; zc0=0 otherwize
+            zc1 = 0.5_wp + SIGN( 0.5_wp , 1._wp-zdcrit )   ! if zdcrit<1 => zc1=1 ; zc0=0 otherwize
 
-               zMC =  zsigII + rz_muMC*zsigI                         ! Mohr-Coulomb  [Eq.29.2]
-               zdcrit = pcohe(ji,jj) / zMC
-               IF( zsigI < -pNlim(ji,jj) ) zdcrit = -pNlim(ji,jj) / zsigI
-
-               IF( (zdcrit > 0._wp).AND.(zdcrit < 1._wp) ) THEN
-                  !! Damage grows, and stresses are decreased accordingly
-                  zmlt = (1._wp - zdcrit) * pdt / zTd          ! Multiplicator for updating stress and damage: `(1 - d_crit)*(pdt/t_d)`
-                  pdmg(ji,jj) =  MIN( pdmg(ji,jj) + (1._wp - pdmg(ji,jj)) * zmlt , rn_dmg_max )
-                  ps11(ji,jj) =       ps11(ji,jj) -          ps11(ji,jj)  * zmlt
-                  ps22(ji,jj) =       ps22(ji,jj) -          ps22(ji,jj)  * zmlt
-                  ps12(ji,jj) =       ps12(ji,jj) -          ps12(ji,jj)  * zmlt
-               END IF
-            ENDIF
+            
+            !IF( (zdcrit > 0._wp).AND.(zdcrit < 1._wp) ) THEN
+            !! Damage grows, and stresses are decreased accordingly
+            zmlt = zc0*zc1*zcA*zcB * (1._wp - zdcrit) * pdt / zTd          ! Multiplicator for updating stress and damage: `(1 - d_crit)*(pdt/t_d)`
+            pdmg(ji,jj) =  MIN( pdmg(ji,jj) + (1._wp - pdmg(ji,jj)) * zmlt , rn_dmg_max )
+            ps11(ji,jj) =       ps11(ji,jj) -          ps11(ji,jj)  * zmlt
+            ps22(ji,jj) =       ps22(ji,jj) -          ps22(ji,jj)  * zmlt
+            ps12(ji,jj) =       ps12(ji,jj) -          ps12(ji,jj)  * zmlt
 
       END_2D
 
