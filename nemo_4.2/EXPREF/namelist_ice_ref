@@ -123,7 +123,6 @@
                                       !          this option 2 asks a lot of communications between cpu
    !                                    !
    ln_rhg_BBM       = .false.         !  BBM rheology
-      ln_MEB        = .false.         !     use the MEB rheology (Dansereau et al., 2016) rather than strictly BBM
       rn_Nref       = 1.E10           !     upper limit for compressive stress at the reference scale [Pa]
       rn_E0         = 5.9605E8        !     elasticity of undamaged ice [Pa]
       rn_eta0       = 5.9605E15       !     viscosity of undamaged ice [Pa.s] (neXtSIM => rn_lamb0 = 1.E7 s)
@@ -141,7 +140,7 @@
       !                               !        = 3 advection of damage + stress tensor components + consider "lower-convected" terms in tensor advection
       !                               !        = 4 advection of damage + stress tensor components + consider "upper-convected" terms in tensor advection
       !                               !
-      rn_crndg      = 2.              ! Cross-Nudging coefficient [-]
+      rn_crndg      = 1.              ! Cross-Nudging coefficient [-]
       ln_boost_CN_coast = .false.     !  =>  ff true, boosts the CN at the coastline
       rn_max_CN_coast   =    4.       !  =>  maximum value the CN coefficient should reach at the coast
       ln_boost_CN_high_dmg = .false.  !  =>  if true, boosts the CN where damage is high

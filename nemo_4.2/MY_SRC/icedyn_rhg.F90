@@ -131,7 +131,7 @@ CONTAINS
       INTEGER ::   ios, ioptio   ! Local integer output status for namelist read
       !!
       NAMELIST/namdyn_rhg/  ln_rhg_EVP, ln_aEVP, ln_rhg_EAP, rn_creepl, rn_ecc , nn_nevp, rn_relast, nn_rhg_chkcvg, &  !-- evp
-         &                  ln_rhg_BBM, ln_MEB, rn_Nref, rn_E0, rn_eta0, rn_P0, rn_kth, nn_nbbm, nn_d_adv,          &  !-- bbm
+         &                  ln_rhg_BBM, rn_Nref, rn_E0, rn_eta0, rn_P0, rn_kth, nn_nbbm, nn_d_adv,          &  !-- bbm
          &                  rn_crndg, ln_boost_CN_coast, rn_max_CN_coast, ln_boost_CN_high_dmg, rn_max_CN_dmg,      &  !-- bbm
          &                  rn_dmg_max, rn_C0, rn_alrlx, rn_btrlx, rn_c_ref, rn_l_ref, ln_damaged_E,                &  !-- bbm
          &                  ln_tame_ini_ws, rn_half_tame,                                                           &  !-- bbm
@@ -167,11 +167,11 @@ CONTAINS
          IF( ln_rhg_BBM ) THEN
             IF(.NOT.ln_damage) CALL ctl_stop( 'ice_dyn_rhg_init: BBM rheology => set `ln_damage=.true` in `nampar`' )
             WRITE(numout,*) '    rheology BBM (icedyn_rhg_bbm)                          ln_rhg_BBM    = ', ln_rhg_BBM !#bbm
-            IF(ln_MEB) WRITE(numout,*) '         will use the MEB rheology variant rather than pure BBM!'
+            !IF(ln_MEB) WRITE(numout,*) '         will use the MEB rheology variant rather than pure BBM!'
             WRITE(numout,*) '         max. compressive stress at the ref. scale [Pa]    rn_Nref       = ', rn_Nref  !#bbm
             WRITE(numout,*) '         elasticity of undamaged ice [Pa]                  rn_E0         = ', rn_E0  !#bbm
             WRITE(numout,*) '         viscosity of undamaged ice  [Pa.s]                rn_eta0       = ', rn_eta0  !#bbm
-            IF(.NOT.ln_MEB ) WRITE(numout,*) '         compression factor "P" at play in "P_max"         rn_P0         = ', rn_P0  !#bbm
+            WRITE(numout,*) '         compression factor "P" at play in "P_max"         rn_P0         = ', rn_P0  !#bbm
             WRITE(numout,*) '         healing constant for damage                       rn_kth        = ', rn_kth  !#bbm
             WRITE(numout,*) '         number of iterations for subcycling               nn_nbbm       = ', nn_nbbm !#bbm
             WRITE(numout,*) '         advection of damage and stresses @T & @F          nn_d_adv  = ', nn_d_adv !#bbm

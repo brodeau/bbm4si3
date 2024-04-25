@@ -66,7 +66,7 @@
       !                               !        = 3 advection of damage + stress tensor components + consider "lower-convected" terms in tensor advection
       !                               !        = 4 advection of damage + stress tensor components + consider "upper-convected" terms in tensor advection
       !                               !
-      rn_crndg      = 2.              ! Cross-Nudging coefficient [-]
+      rn_crndg      = 1.              ! Cross-Nudging coefficient [-]
       !                               !
       rn_dmg_max     = 0.9999999      !     upper-bound value to cap the damage to ! (~ 1 - eps )
       rn_C0          = -20.           ! compaction parameter "C" (Hibler's exponential)                              =  -20.

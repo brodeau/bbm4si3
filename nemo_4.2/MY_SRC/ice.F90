@@ -171,7 +171,7 @@ MODULE ice
    INTEGER , PUBLIC ::   nn_vp_chkcvg     !: Number of iterations every each convergence is checked
    !
    ! #bbm:
-   LOGICAL,  PUBLIC ::   ln_MEB           !: use the MEB rheology (Dansereau et al., 2016) rather than strictly BBM
+   !LOGICAL,  PUBLIC ::   ln_MEB           !: use the MEB rheology (Dansereau et al., 2016) rather than strictly BBM
    INTEGER , PUBLIC ::   nn_nbbm          !: number of iterations for subcycling !#bbm
    REAL(wp), PUBLIC ::   rn_Nref          !: Maximum compressive stress at the reference scale [Pa] / neXtSIM => `compr_strength`
    REAL(wp), PUBLIC ::   rn_P0            !: Compression factor "P" at play in P_max, in Eq.8 of [Olason al.2022], useless when `ln_MEB=.true.`

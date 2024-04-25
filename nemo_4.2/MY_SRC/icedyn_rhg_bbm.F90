@@ -73,7 +73,7 @@ MODULE icedyn_rhg_bbm
    LOGICAL,  SAVE :: l_CN_is_2d  !: whether cross nudging coefficient is a 2D array, not a scalar
    REAL(wp), SAVE :: rCNC_eff    !: effective cross-nudging coefficient [-]
 
-   REAL(wp), SAVE :: rz_alfm1, rz_betm1, r_i_do_bbm=1._wp  !: `r_i_do_bbm=0` when MEB (ln_MEB==.true.)
+   REAL(wp), SAVE :: rz_alfm1, rz_betm1
 
    !! * Substitutions
 #  include "do_loop_substitute.h90"
@@ -101,10 +101,6 @@ CONTAINS
          WRITE(numout,*) '    *** Initialization of BBM rheology (ice_dyn_rhg_bbm_init) ***'
       ENDIF
 
-      !r_i_do_bbm = 1._wp
-      !IF( ln_MEB ) r_i_do_bbm = 0._wp
-      IF( ln_MEB ) CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: add MEB to the code !!!!')
-      
       rz_alfm1 = rn_alrlx - 1._wp
       rz_betm1 = rn_btrlx - 1._wp
 
