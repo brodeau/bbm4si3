@@ -68,7 +68,7 @@
       !                               !
       rn_crndg      = 1.              ! Cross-Nudging coefficient [-]
       !                               !
-      rn_dmg_max     = 0.9999999      !     upper-bound value to cap the damage to ! (~ 1 - eps )
+      rn_dmg_max     = 0.99999        !     upper-bound value to cap the damage to ! (~ 1 - eps )
       rn_C0          = -20.           ! compaction parameter "C" (Hibler's exponential)                              =  -20.
       rn_alrlx       =   5.           ! `alpha` inherent to viscosity, Eq.10 of [Olason al.2022], used by Dansereau  =   5.
       rn_btrlx       =   5.           ! `beta`: sort of an `alpha` to go in the exp[] of `lambda`, used by Olason Boutin =   5.
@@ -78,8 +78,6 @@
       rn_l_ref       = 0.1            !     scaling parameter for cohesion (`l_ref` in Olason et al.,2022)
       !
       ln_damaged_E   = .true.         ! use damaged elasticity in MC test (propagation speed of elastic waves)
-      ln_tame_ini_ws = .false.        ! Gently increase the wind stress from zero to expected value when cold-starting an experiment
-         rn_half_tame = 24.           !  => delay, in hours, at which half of the above taming is completed
 /
 !------------------------------------------------------------------------------
 &namdyn_adv     !   Ice advection
