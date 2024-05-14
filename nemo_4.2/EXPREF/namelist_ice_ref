@@ -121,13 +121,13 @@
                                       !     = 1  check at the main time step (output xml: uice_cvg)
                                       !     = 2  check at both main and rheology time steps (additional output: ice_cvg.nc)
                                       !          this option 2 asks a lot of communications between cpu
-   !                                    !
+   !                                  !
    ln_rhg_BBM       = .false.         !  BBM rheology
       rn_Nref       = 1.E10           !     upper limit for compressive stress at the reference scale [Pa]
       rn_E0         = 5.9605E8        !     elasticity of undamaged ice [Pa]
       rn_eta0       = 5.9605E15       !     viscosity of undamaged ice [Pa.s] (neXtSIM => rn_lamb0 = 1.E7 s)
       !
-      rn_P0         = 1.E4            !     scaling parameter for the ridging threshold (in "P_max"), useless when `ln_MEB=.true.` !
+      rn_P0         = 1.E4            !     scaling parameter for the ridging threshold (in "P_max")
       !
       rn_kth        = 25.92E6         !     constant for healing of damage [K.s] (Olason et al.,2022 => 15 days for 20 K)
       !                               !     => 15 * 3600s * 24 * 20K
@@ -146,7 +146,7 @@
       ln_boost_CN_high_dmg = .false.  !  =>  if true, boosts the CN where damage is high
       rn_max_CN_dmg     =   4.        !  =>   maximum value the CN coefficient should reach when boost is needed
       !                               !
-      rn_dmg_max     = 0.9999999      !     upper-bound value to cap the damage to ! (~ 1 - eps )
+      rn_dmg_max     = 0.999999       !     upper-bound value to cap the damage to ! (~ 1 - eps )
       rn_C0          = -20.           ! compaction parameter "C" (Hibler's exponential)                              =  -20.
       rn_alrlx       =   5.           ! `alpha` inherent to viscosity, Eq.10 of [Olason al.2022], used by Dansereau  =   5.
       rn_btrlx       =   5.           ! `beta`: sort of an `alpha` to go in the exp[] of `lambda`, used by Olason Boutin =   5.
@@ -155,7 +155,6 @@
       rn_c_ref       = 2.E6           ! cohesion value at the reference scale                      = 2.E6
       rn_l_ref       = 0.1            !     scaling parameter for cohesion (`l_ref` in Olason et al.,2022)
       !
-      ln_damaged_E   = .true.         ! use damaged elasticity in MC test (propagation speed of elastic waves)
       ln_tame_ini_ws = .false.        ! Gently increase the wind stress from zero to expected value when cold-starting an experiment
          rn_half_tame = 24.           !  => delay, in hours, at which half of the above taming is completed
    !

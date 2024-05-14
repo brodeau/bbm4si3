@@ -74,6 +74,8 @@
       <field id="d_v_cvrg"     long_name="V convergence increment"                                 standard_name="d_v_cvrg"                                  unit="1000*m/s"  />
       <field id="zalpha_Pt"    long_name="alpha_to_Pmax @T"                                        standard_name="alpha_to_Pmax_t"         unit=""  /> <!-- #bbm -->
       <field id="zalpha_Pf"    long_name="alpha_to_Pmax @F"                                        standard_name="alpha_to_Pmax_f"         unit=""  /> <!-- #bbm -->
+      <field id="ice_heal_c"   long_name="healing parameter C @T"                                  standard_name="ice_heal_c"              unit=""  /> <!-- #bbm -->
+      <field id="ice_heal_x"   long_name="healing coefficiebt @T"                                  standard_name="ice_heal_x"              unit="s-1" /> <!-- #bbm -->      
 
       <!-- BBM. -->
 
