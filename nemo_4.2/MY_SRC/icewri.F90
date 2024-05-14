@@ -106,8 +106,8 @@ CONTAINS
       IF( iom_use('icebrv'  ) )   CALL iom_put( 'icebrv' , bvm_i* 100. * zmsk00 )                                           ! brine volume
       IF( iom_use('iceage'  ) )   CALL iom_put( 'iceage' , om_i / rday * zmsk15 + zmiss_val * ( 1._wp - zmsk15 ) )          ! ice age
       IF( ln_rhg_BBM ) THEN
-         IF( iom_use('iceconcf') ) CALL iom_put( 'iceconcf', a_f(:,:)         )          ! ice concentration @F #dmg
-         IF( iom_use('icethicf') ) CALL iom_put( 'icethicf', h_f(:,:)         )          ! ice thickness     @F #dmg
+         IF( iom_use('iceconcf') ) CALL iom_put( 'iceconcf', af_i(:,:)         )          ! ice concentration @F #dmg
+         !IF( iom_use('icethicf') ) CALL iom_put( 'icethicf', h_f(:,:)         )          ! ice thickness     @F #dmg
          IF( iom_use('icedmgt' ) ) CALL iom_put( 'icedmgt', dmgt*xmsk_ice_t   )          ! ice damage @T !#dmg
          IF( iom_use('icedmgf' ) ) CALL iom_put( 'icedmgf', dmgf*xmsk_ice_f   )          ! ice damage @T !#dmg
       END IF

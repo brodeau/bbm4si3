@@ -15,7 +15,7 @@ MODULE icedyn_rhg_bbm
    !!----------------------------------------------------------------------
    USE phycst         ! Physical constant
    USE dom_oce        ! Ocean domain
-   USE sbc_oce , ONLY : ln_ice_embd, nn_fsbc, ssh_m
+   USE sbc_oce , ONLY : nn_fsbc, ssh_m
    USE sbc_ice , ONLY : utau_ice, vtau_ice, snwice_mass, snwice_mass_b
    USE ice            ! sea-ice: ice variables
    USE icevar         ! ice_var_sshdyn
@@ -49,12 +49,11 @@ MODULE icedyn_rhg_bbm
       &                   rz_muMC  = 0.7_wp,      &  !: slope of Mohr-Coulomb enveloppe
       &                   reps6    = 1.e-6_wp,    &
       &                   reps12   = 1.e-12_wp,   &
-      &                   reps24   = 1.e-24_wp,   &
-      &                   rlamb_min = 1._wp       ! minimum possible value for `lambda`, numerical issues otherwize
+      &                   reps24   = 1.e-24_wp
 
    REAL(wp),  SAVE :: rk0  ! factor to stiffness matrix => 1._wp / ( 1._wp - rz_nup*rz_nup)
    REAL(wp),  SAVE :: rk11, rk22, rk12, rk33 ! elements of stiffness matrix
-   REAL(wp),  SAVE :: rlambda0, rsqrt_nu_rhoi, rsqrt_E0 ! Constant part of Eq.28
+   REAL(wp),  SAVE :: rlambda0, rsqrt_nu_rhoi, rsqrt_E0, rCe0 ! Constant part of Eq.28
 
    !! Arrays to be allocated into `ice_dyn_rhg_bbm_init()`:
    REAL(wp), DIMENSION(:,:), ALLOCATABLE, SAVE :: Uu_sub, Uv_sub, Vv_sub, Vu_sub !: ice velocities that evolve at sub-time-step
@@ -64,7 +63,7 @@ MODULE icedyn_rhg_bbm
    REAL(wp), DIMENSION(:,:), ALLOCATABLE, SAVE :: xtcoast, xfcoast ! to prevent doing cross-nudging at the coast!
    REAL(wp), DIMENSION(:,:), ALLOCATABLE, SAVE :: xCNt, xCNf   ! cross nudging coefficients (time-dependant)
 
-   LOGICAL, PARAMETER :: l_use_v_for_h = .TRUE.  !LOLO: we should not! But `h` is sloppy by essence in SI3...
+   LOGICAL, PARAMETER :: l_use_v_for_h = .TRUE.  !#LB: we should not! But `h` is sloppy by essence in SI3...
 
    REAL(wp), SAVE :: zrhoco      !: sea-water density x ocean-ice drag coeff. [kg/m3]
    REAL(wp), SAVE :: zdtbbm, z1_dtbbm !: small time step (time splitting) [s] and its inverse [1/s]
@@ -72,8 +71,6 @@ MODULE icedyn_rhg_bbm
    LOGICAL,  SAVE :: l_CN        !: whether cross nudging is used ?
    LOGICAL,  SAVE :: l_CN_is_2d  !: whether cross nudging coefficient is a 2D array, not a scalar
    REAL(wp), SAVE :: rCNC_eff    !: effective cross-nudging coefficient [-]
-
-   REAL(wp), SAVE :: rz_alfm1, rz_betm1
 
    !! * Substitutions
 #  include "do_loop_substitute.h90"
@@ -100,9 +97,6 @@ CONTAINS
          WRITE(numout,*) '**********************************************************************'
          WRITE(numout,*) '    *** Initialization of BBM rheology (ice_dyn_rhg_bbm_init) ***'
       ENDIF
-
-      rz_alfm1 = rn_alrlx - 1._wp
-      rz_betm1 = rn_btrlx - 1._wp
 
       zrhoco   = rho0 * rn_cio
       zdtbbm   = rdt_ice / REAL( nn_nbbm, wp )
@@ -145,7 +139,7 @@ CONTAINS
       ALLOCATE( Uu_sub(jpi,jpj), Uv_sub(jpi,jpj), Vv_sub(jpi,jpj), Vu_sub(jpi,jpj),       STAT=ierror )
       IF( ierror /= 0 )  CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: failed to allocate ice velocity arrays' )
 
-      ALLOCATE( uVice(jpi,jpj) , vUice(jpi,jpj) , a_f(jpi,jpj) , h_f(jpi,jpj) , STAT=ierror )
+      ALLOCATE( uVice(jpi,jpj) , vUice(jpi,jpj) , af_i(jpi,jpj) , STAT=ierror )
       IF( ierror /= 0 )  CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: failed to allocate PUBLIC arrays' )
 
       IF( l_CN ) THEN
@@ -219,11 +213,12 @@ CONTAINS
          IF(l_CN) THEN
             WRITE(numout,*) '  * About cross-nudging:'
             WRITE(numout,*) '      - CN parameter (gamma) => rn_crndg =', rn_crndg,' [-]'
-            WRITE(numout,*) '      - nudging coefficient  =>    k_cn  =', rn_crndg/rdt_ice,' [s**-1]'
-            WRITE(numout,*) '      - effective CN coeff.  => rCNC_eff (= k_cn*dt) =', rCNC_eff,' [-]'
-            WRITE(numout,*) '      - theoretical half-life of ajustment reached after', &
-               &                  INT(2._wp*LOG(2._wp)*REAL(nn_nbbm,wp)/rn_crndg,1), ' sub-time-steps!'
+            !WRITE(numout,*) '      - nudging coefficient  =>    k_cn  =', rn_crndg/rdt_ice,' [s**-1]'
+            !WRITE(numout,*) '      - effective CN coeff.  => rCNC_eff (= k_cn*dt) =', rCNC_eff,' [-]'
+            !WRITE(numout,*) '      - theoretical half-life of ajustment reached after', &
+            !   &                  INT( 2._wp*LOG(2._wp)*REAL(nn_nbbm,wp)/rn_crndg ,2 ), ' sub-time-steps!'
          ENDIF
+         WRITE(numout,*) '  * (scaled) Compression threshod => N_lim =',REAL(rn_Nref*SQRT( rn_l_ref/zdx_m ),4),' [Pa]'
          WRITE(numout,*) ''
       ENDIF
 
@@ -242,6 +237,7 @@ CONTAINS
       !------------------------------------------------------------------------------!
       ! 0) mask at F points for the ice
       !------------------------------------------------------------------------------!
+      IF( (rn_ishlat<2._wp).OR.(rn_ishlat>2._wp) ) CALL ctl_stop( 'STOP', 'ice_dyn_rhg_bbm_init: BBM only supports "no-slip" `rn_ishlat=2` for now' )
       !! LB => it's exactly the same as `fmask` !!? Why bother redoing it ???
       !IF( rn_ishlat == 0._wp ) THEN
       !   DO_2D( 0, 0, 0, 0 )
@@ -268,7 +264,7 @@ CONTAINS
    END SUBROUTINE ice_dyn_rhg_bbm_init
 
 
-   SUBROUTINE ice_dyn_rhg_bbm( kt, Kmm, pstress1_i, pstress2_i, pstress12_i, pshear_i, pdivu_i, pdelta_i )
+   SUBROUTINE ice_dyn_rhg_bbm( kt, Kmm, pstress1_i, pstress2_i, pstress12_i, pshear_i, pdivu_i )
       !!-------------------------------------------------------------------
       !!                 ***  SUBROUTINE ice_dyn_rhg_bbm  ***
       !!                             BBM-C-grid
@@ -310,7 +306,7 @@ CONTAINS
       INTEGER                 , INTENT(in ) ::   kt                                    ! time step
       INTEGER                 , INTENT(in ) ::   Kmm                                   ! ocean time level index
       REAL(wp), DIMENSION(:,:), INTENT(out) ::   pstress1_i, pstress2_i, pstress12_i   !
-      REAL(wp), DIMENSION(:,:), INTENT(out) ::   pshear_i  , pdivu_i   , pdelta_i      !
+      REAL(wp), DIMENSION(:,:), INTENT(out) ::   pshear_i  , pdivu_i
       !!
       INTEGER ::   ji, jj       ! dummy loop indices
       INTEGER ::   jter         ! local integers
@@ -354,7 +350,7 @@ CONTAINS
       !------------------------------------------------------------------------------!
 
       !! Ice concentration and thicknes @T we are going to work with:
-      zAt(:,:) =      at_i(:,:)
+      zAt(:,:) = at_i(:,:)
       IF( l_use_v_for_h ) THEN
          zht(:,:) = MAX( vt_i(:,:) , 0._wp)
       ELSE
@@ -380,9 +376,7 @@ CONTAINS
       xmsk_ice_t(:,:) = xmsk_ice_t(:,:)*xmskt(:,:)
       xmsk_ice_f(:,:) = xmsk_ice_f(:,:)*xmskf(:,:)
 
-      !! Compute h_f... Useless I think... Unless for saving it as output
-      a_f(:,:) = zAf(:,:) ! => used for advection of `dmgf` !
-      h_f(:,:) = zhf(:,:)
+      af_i(:,:) = zAf(:,:) ! => used for advection of `dmgf` !
 
       !------------------------------------------------------------------------------!
       ! 2) Wind / ocean stress, mass terms, coriolis terms
@@ -390,7 +384,7 @@ CONTAINS
       ! sea surface height
       !    embedded sea ice: compute representative ice top surface
       !    non-embedded sea ice: use ocean surface for slope calculation
-      zsshdyn(:,:) = ice_var_sshdyn( ssh_m, snwice_mass, snwice_mass_b)
+      zsshdyn(:,:) = ice_var_sshdyn( ssh_m, snwice_mass, snwice_mass_b )
 
       zspgUu(:,:) = 0._wp ; zspgUv(:,:) = 0._wp
       zspgVv(:,:) = 0._wp ; zspgVu(:,:) = 0._wp
@@ -488,6 +482,26 @@ CONTAINS
          !
       ENDIF !IF( l_CN_is_2d )
 
+      ! --- Healing of damage with time [Eq.30, Olason et al., 2022]  !lili
+      !     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+      ztmp3(:,:) = rcnd_i*hm_s(:,:) / MAX( rn_cnd_s*hm_i(:,:), reps6 ) * xmskt(:,:)   ! => `C` of the `dtemp/(1 + C)` in neXtSIM
+      IF(iom_use('ice_heal_c'))  CALL iom_put( 'ice_heal_c' , ztmp3 )
+      IF(ln_icethd) THEN
+         !! Thermo is used, normal stuff:
+         ztmp1(:,:) = (t_bo(:,:) - tm_su(:,:)) / (1._wp + ztmp3(:,:) ) * xmskt(:,:) ! temperature difference between bottom and surface
+      ELSE
+         !! Thermo is off, yet we want som refreezing!
+         ztmp1(:,:) = (-1.8_wp + 25._wp)/ (1._wp + ztmp3(:,:) ) * xmskt(:,:) ! temperature difference between bottom and surface
+      END IF
+      ztmp2(:,:) = MIN( ztmp1(:,:) / rn_kth , 1._wp/rdt_ice )  ! 1/T_relax
+      IF(iom_use('ice_heal_x'))  CALL iom_put( 'ice_heal_x' , ztmp2 )
+      WHERE( ztmp1(:,:) > 0._wp ) dmgt(:,:) = MAX( dmgt(:,:) - rdt_ice*ztmp2(:,:)      , 0._wp )
+      ztmp5(:,:) = rmpT2F( ztmp1 )
+      WHERE( ztmp5(:,:) > 0._wp ) dmgf(:,:) = MAX( dmgf(:,:) - rdt_ice*rmpT2F( ztmp2 ) , 0._wp )
+      CALL cap_damage( 'T', 'update_stress_dmg', dmgt )
+      CALL cap_damage( 'F', 'update_stress_dmg', dmgf )
+
+      
       !! Because there has been advection of `damage` and stress tensors since last time we called `clean_small_a_all`:
       CALL clean_small_a_all( zAt, zAf,  dmgt, dmgf,  sgm11t, sgm22t, sgm12t,  sgm11f, sgm22f, sgm12f )
 
@@ -583,6 +597,9 @@ CONTAINS
       END DO !DO jter = 1 , nn_nbbm                       !  end loop over jter  !
       !                                                   ! ==================== !
 
+      IF(iom_use('fUu'))  CALL iom_put( 'fUu' , ztmp4 )
+      IF(iom_use('fVv'))  CALL iom_put( 'fVv' , ztmp5 )
+
       !! Closer look at the components of rate-of-strain tensor:
       IF( iom_use('e11t').OR.iom_use('e22t').OR.iom_use('e12t') ) THEN
          CALL strain_rate( 'T', u_ice, v_ice, uVice, vUice, &
@@ -615,14 +632,10 @@ CONTAINS
       IF( iom_use('sheastr' )) CALL iom_put( 'sheastr',  sigmaII( sgm11t, sgm22t, sgm12t ) )
       IF( iom_use('sheastrf')) CALL iom_put( 'sheastrf', sigmaII( sgm11f, sgm22f, sgm12f ) )
       !
-      IF(iom_use('fUu'))  CALL iom_put( 'fUu' , ztmp4 )
-      IF(iom_use('fVv'))  CALL iom_put( 'fVv' , ztmp5 )
 
       !------------------------------------------------------------------------------!
-      ! 4) Recompute delta, shear and div (inputs for mechanical redistribution)
+      ! 4) Recompute shear and div (inputs for mechanical redistribution)
       !------------------------------------------------------------------------------!
-
-      pdelta_i(:,:) = 0._wp ; ! LB> #fixme: is it really not needed in any context?
 
       CALL strain_rate( 'T', u_ice, v_ice, uVice, vUice, &
          &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, Xe1t2, Xe2t2, tmask(:,:,1), &
@@ -763,7 +776,7 @@ CONTAINS
       !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       !
       !! Compute `elasticity`, and `update multiplicator` @ T-points (=> zelat, zmltt)
-      CALL PHASE_I( pdt, pAt, pht, pdmgt, ps11t, ps22t, ps12t,  zelat, zlambt, zmltt )
+      CALL UPDATE_E_L_MULT( pdt, pAt, pht, pdmgt, ps11t, ps22t, ps12t,  zelat, zlambt, zmltt )
       !
       !! Compute the 3 components of the strain-rate tensor @ T-points (=> ztp1, ztp2, ztp3):
       CALL strain_rate( 'T', pUu, pVv, pUv, pVu, r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, Xe1t2, Xe2t2, tmask(:,:,1), &
@@ -783,7 +796,7 @@ CONTAINS
       END_2D
 
       !! Compute `elasticity`, and `update multiplicator` @ F-points (=> zelaf, zmltf)
-      CALL PHASE_I( pdt, pAf, phf, pdmgf, ps11f, ps22f, ps12f,  zelaf, zlambf, zmltf ) ! compute `elasticity` and `update multiplicator` @ F
+      CALL UPDATE_E_L_MULT( pdt, pAf, phf, pdmgf, ps11f, ps22f, ps12f,  zelaf, zlambf, zmltf ) ! compute `elasticity` and `update multiplicator` @ F
       !
       !! Compute the 3 components of the strain-rate tensor @ F-points (=> ztp1, ztp2, ztp3):
       CALL strain_rate( 'F', pUv, pVu, pUu, pVv, r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, Xe1f2, Xe2f2, fmask(:,:,1), &
@@ -834,21 +847,6 @@ CONTAINS
       !! --- Mohr-Coulomb test and britle update ---
       CALL MOHR_COULOMB_DMG( pdt, Xcohst, XNlimt, zelat, Xdxt, ps11t, ps22t, ps12t, pdmgt )
       CALL MOHR_COULOMB_DMG( pdt, Xcohsf, XNlimf, zelaf, Xdxf, ps11f, ps22f, ps12f, pdmgf )
-
-      ! --- Healing of damage with time [Eq.30, Olason et al., 2022]
-      !      ==> can suposedely be taken out of sub-time-stepping loop...
-      ztp3(:,:) = (rcnd_i*vt_s(:,:))/( rn_cnd_s*MAX(pht(:,:),reps6) ) * xmskt(:,:)   ! => `C` of the `dtemp/(1 + C)` in neXtSIM
-      IF(ln_icethd) THEN
-         !! Thermo is used, normal stuff:
-         ztp1(:,:) = (t_bo(:,:) - t_su(:,:,1)) / (1._wp + ztp3(:,:) ) * xmskt(:,:) ! temperature difference between bottom and surface
-      ELSE
-         !! Thermo is off, yet we want som refreezing!
-         ztp1(:,:) = (-1.8_wp + 25._wp)/ (1._wp + ztp3(:,:) ) * xmskt(:,:) ! temperature difference between bottom and surface
-      END IF
-      ztp2(:,:) = MIN( ztp1(:,:) / rn_kth , 1._wp/rdt_ice )  ! 1/T_relax
-      WHERE( ztp1(:,:) > 0._wp ) pdmgt(:,:) = MAX( pdmgt(:,:) - pdt*ztp2(:,:)      , 0._wp )
-      ztp0(:,:) = rmpT2F( ztp1 )
-      WHERE( ztp0(:,:) > 0._wp ) pdmgf(:,:) = MAX( pdmgf(:,:) - pdt*rmpT2F( ztp2 ) , 0._wp )
 
       CALL clean_small_a_all( pAt, pAf,  pdmgt, pdmgf,  ps11t, ps22t, ps12t,  ps11f, ps22f, ps12f )
 
@@ -965,7 +963,6 @@ CONTAINS
                dmgt(:,:) = 0._wp
                dmgf(:,:) = 0._wp
             ELSE
-               !PRINT *, 'LOLO[icedyn_rhg_bbm.F90] rhg_bbm_rst(): damage@T taken from `sn_dmg` file => damage@F interpolated!'
                IF(lwp) WRITE(numout,*) '   ==>>>   damage@T taken from `sn_dmg@namini` file => damage@F interpolated!'
                dmgt(:,:) = MIN( MAX(         dmgt(:,:)                , 0._wp ) , rn_dmg_max )
                dmgf(:,:) = MIN( MAX( rmpT2F( dmgt,  lconserv=.TRUE. ) , 0._wp ) , rn_dmg_max )
@@ -1022,7 +1019,7 @@ CONTAINS
    END SUBROUTINE rhg_bbm_rst
 
 
-   SUBROUTINE PHASE_I( pdt, pA, ph, pdmg, ps11, ps22, ps12, pelast, plamb, pmult )
+   SUBROUTINE UPDATE_E_L_MULT( pdt, pA, ph, pdmg, ps11, ps22, ps12, pelast, plamb, pmult )
       !!
       REAL(wp),                 INTENT(in)  :: pdt         ! (small) time-step [s]
       REAL(wp), DIMENSION(:,:), INTENT(in)  :: pA          ! Ice concentration
@@ -1056,7 +1053,7 @@ CONTAINS
             zeta = rn_eta0 * z1md**rn_alrlx * zxpC**rn_btrlx
 
             zlamb = zeta / MAX( zE, reps24 )  ! time-scale for viscous relaxation
-            zlamb = MAX( zlamb, rlamb_min )
+            zlamb = MAX( zlamb, pdt )         ! 
 
             zsigI  = 0.5_wp * ( ps11(ji,jj) + ps22(ji,jj) ) ! sigI: normal stress aka first invariant
             zsigII = sigmaII( ps11(ji,jj), ps22(ji,jj), ps12(ji,jj) )
@@ -1076,7 +1073,7 @@ CONTAINS
 
       END_2D
 
-   END SUBROUTINE PHASE_I
+   END SUBROUTINE UPDATE_E_L_MULT
 
 
    SUBROUTINE MOHR_COULOMB_DMG( pdt, pcohe, pNlim, pE, pdx,  ps11, ps22, ps12, pdmg )
@@ -1091,21 +1088,16 @@ CONTAINS
       !!
       REAL(wp) :: zsigI, zsigII, zMC
       REAL(wp) :: zdcrit, zmlt, zsqrtE, zTd, zc0, zc1, z1_zsigI, z1_zMC, zNlim, zcA, zcB
-      REAL(wp) :: rEdmgd
       INTEGER  :: ji, jj
       !!
-      !! Maybe a superstition, but I want to avoid a IF block inside the upcoming DO loop:
-      rEdmgd = 0.
-      IF( ln_damaged_E ) rEdmgd = 1.
-
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
 
             zNlim = pNlim(ji,jj)
       
             zdcrit = 9999._wp ; ! just for initialization
 
-            zsqrtE = rEdmgd * SQRT(MAX(pE(ji,jj),reps6))   +   (1. - rEdmgd) * rsqrt_E0  ! `sqrt(E)` damaged or undamaged...
-            zTd    = MAX( pdx(ji,jj) * rsqrt_nu_rhoi / zsqrtE , reps6 )              ! characteristic time for damage [s] |  (we shall divide by it)...
+            zsqrtE = SQRT(MAX(pE(ji,jj),reps6))                               ! `sqrt(E)` (damaged ice)...
+            zTd    = MAX( pdx(ji,jj) * rsqrt_nu_rhoi / zsqrtE , reps6 )       ! characteristic time for damage [s] |  (we shall divide by it)...
 
             zsigI  = 0.5_wp * (ps11(ji,jj) + ps22(ji,jj))
 

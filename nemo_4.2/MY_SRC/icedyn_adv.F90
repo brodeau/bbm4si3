@@ -107,13 +107,13 @@ CONTAINS
       !                                !-----------------------!
       CASE( np_advUMx )                ! ULTIMATE-MACHO scheme !
          !                             !-----------------------!
-         IF(lwp) WRITE(numout,'("  *** advects GENERIC fields @T with UMX, order = ",i1," kt=",i5.5)') nn_UMx, kt
+         IF(lwp) WRITE(numout,'("  *** advects GENERIC fields @T with UMX, order = ",i1," kt=",i6.6)') nn_UMx, kt
          CALL ice_dyn_adv_umx( nn_UMx, kt, u_ice, v_ice, h_i, h_s, h_ip, &
             &                          ato_i, v_i, v_s, sv_i, oa_i, a_i, a_ip, v_ip, v_il, e_s, e_i )
          !                             !-----------------------!
       CASE( np_advPRA )                ! PRATHER scheme        !
          !                             !-----------------------!
-         IF(lwp) WRITE(numout,'("  *** advects GENERIC fields @T with Prather, kt=",i5.5)') kt
+         IF(lwp) WRITE(numout,'("  *** advects GENERIC fields @T with Prather, kt=",i6.6)') kt
          CALL ice_dyn_adv_pra(         kt, u_ice, v_ice, h_i, h_s, h_ip, &
             &                          ato_i, v_i, v_s, sv_i, oa_i, a_i, a_ip, v_ip, v_il, e_s, e_i )
       END SELECT
@@ -125,21 +125,21 @@ CONTAINS
 
             IF( l_advct_stresses ) THEN
                !! 1st, find the maximum values to pick an `add_offset` !
-               !! for `skk` we nultiply it by `-1` so negative values will be smaller (normally: `HUGE_NEG_VAL < skk < SMALL_POS_VAL` )
+               !! *** sgm11 & sgm22 ***
+               !!     for `skk` we nultiply it by `-1` so negative values will be smaller (normally: `HUGE_NEG_VAL < skk < SMALL_POS_VAL` )
                zm1t = MAXVAL( sgm11t(:,:)*r_sgm_sf*xmskt(:,:) )
                zm2t = MAXVAL( sgm22t(:,:)*r_sgm_sf*xmskt(:,:) )
                zm1f = MAXVAL( sgm11f(:,:)*r_sgm_sf*xmskf(:,:) )
-               zm2f = MAXVAL( sgm22f(:,:)*r_sgm_sf*xmskf(:,:) )
-               z_skk_ao = MAX( MAX(zm1t,zm2t), MAX(zm1f,zm2f) )
-               z_skk_ao = MAX( z_skk_ao, 1.E-3_wp ) ! safety...
+               zm2f = MAXVAL( sgm22f(:,:)*r_sgm_sf*xmskf(:,:) )               
+               z_skk_ao = MAX( MAX(zm1t,zm2t), MAX(zm1f,zm2f) ) + 0.01_wp ! +0.01 to be sure we are larger!
                CALL mpp_max( 'icedyn_adv', z_skk_ao )
                z_skk_ao = r_mltpl_skk * REAL( CEILING( z_skk_ao/r_mltpl_skk) , wp ) ! we want it to be the multiple of `r_mltpl_skk` and just above...
                z_skk_ao = MAX( z_skk_ao, 2._wp )
                !
+               !! *** sgm12 ***
                zm1t = MINVAL( sgm12t(:,:)*r_sgm_sf*xmskt(:,:) )
                zm1f = MINVAL( sgm12f(:,:)*r_sgm_sf*xmskf(:,:) )
-               z_s12_ao = -1._wp * MIN( zm1t, zm1f ) ! => positive
-               z_s12_ao = MAX( z_s12_ao, 1.E-3_wp ) ! safety...
+               z_s12_ao = -1._wp * MIN( zm1t, zm1f ) + 0.01_wp ! => positive |  ! +0.01 to be sure we are larger!
                CALL mpp_max( 'icedyn_adv', z_s12_ao )
                z_s12_ao = r_mltpl_s12 * REAL( CEILING( z_s12_ao/r_mltpl_s12) , wp ) ! be a multiple of `r_mltpl_s12` and just above it...
                z_s12_ao = MAX( z_s12_ao, 5._wp )
@@ -167,12 +167,12 @@ CONTAINS
                   CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @T still has negative value(s)!!!')
                ENDIF
                !!
-               IF(lwp) WRITE(numout,'("  *** advects damage & stresses @T with Prather, kt=",i5.5)') kt
+               IF(lwp) WRITE(numout,'("  *** advects damage & stresses @T with Prather, kt=",i6.6)') kt
                IF(lwp) WRITE(numout,'("      ==> offset for `skk` and `s12`: ",f6.2,", ",f6.2)') z_skk_ao, z_s12_ao
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos, pdd1=zs12_pos, pdd2=zs11_pos, pdd3=zs22_pos )
             ELSE
                !!
-               IF(lwp) WRITE(numout,'("  *** advects only damage @T with Prather, kt=",i5.5)') kt
+               IF(lwp) WRITE(numout,'("  *** advects only damage @T with Prather, kt=",i6.6)') kt
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos )
             ENDIF !IF( l_advct_stresses )
 
@@ -191,16 +191,16 @@ CONTAINS
                      &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, e1t*e1t, e2t*e2t, tmask(:,:,1), &
                      &              zdudx, zdvdy, zdmg_pos, lblnk=.TRUE., pdudy=zdudy, pdvdx=zdvdx, pdiv=zdiv )
                   IF(nn_d_adv==3) THEN
-                     IF(lwp) WRITE(numout,'("  *** Going for LOWER-CONVECTED advection term, kt=",i5.5)') kt
+                     IF(lwp) WRITE(numout,'("  *** Going for LOWER-CONVECTED advection term, kt=",i6.6)') kt
                      CALL lower_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, sgm11t,  sgm22t,  sgm12t, &
                         &                                                              zs11_ci, zs22_ci, zs12_ci )
                   ELSEIF(nn_d_adv==4) THEN
-                     IF(lwp) WRITE(numout,'("  *** Going for UPPER-CONVECTED advection term, kt=",i5.5)') kt
+                     IF(lwp) WRITE(numout,'("  *** Going for UPPER-CONVECTED advection term, kt=",i6.6)') kt
                      CALL upper_convected_inc( zdudx, zdudy, zdvdx, zdvdy, zdiv, xmskt, sgm11t,  sgm22t,  sgm12t, &
                         &                                                              zs11_ci, zs22_ci, zs12_ci )
                   ENDIF
                ELSE
-                  IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i5.5)') kt
+                  IF(lwp) WRITE(numout,'("  *** No Upper- or Lower-convected advection term used! kt=",i6.6)') kt
                END IF !IF( l_advct_oldroyd )
 
                !! Fall back after advection (and add upper- or lower-convected contrib if needed):
@@ -234,11 +234,11 @@ CONTAINS
                   CALL ctl_stop( 'ice_dyn_adv: a "transformed" sigma_12 @F still has negative value(s)!!!')
                ENDIF
                !!
-               IF(lwp) WRITE(numout,'("  *** advects damage & stresses @F with Prather, kt=",i5.5)') kt
+               IF(lwp) WRITE(numout,'("  *** advects damage & stresses @F with Prather, kt=",i6.6)') kt
                CALL ice_dyn_adv_pra_f_d( kt, uVice, vUice,  zdmg_pos, pdd1=zs12_pos, pdd2=zs11_pos, pdd3=zs22_pos )
             ELSE
                !!
-               IF(lwp) WRITE(numout,'("  *** advects only damage @F with Prather, kt=",i5.5)') kt
+               IF(lwp) WRITE(numout,'("  *** advects only damage @F with Prather, kt=",i6.6)') kt
                CALL ice_dyn_adv_pra_f_d( kt, uVice, vUice,  zdmg_pos )
             ENDIF !IF( l_advct_stresses )
 
@@ -272,8 +272,8 @@ CONTAINS
 
             END IF !IF( l_advct_stresses )
 
-            CALL clean_small_a_sgm( 'T', at_i, a_f,  sgm11t, sgm22t, sgm12f )
-            CALL clean_small_a_sgm( 'F', at_i, a_f,  sgm11f, sgm22f, sgm12t )
+            CALL clean_small_a_sgm( 'T', at_i, af_i,  sgm11t, sgm22t, sgm12f )
+            CALL clean_small_a_sgm( 'F', at_i, af_i,  sgm11f, sgm22f, sgm12t )
 
          END IF !IF( nn_d_adv >= 1 )
       END IF !IF( ln_rhg_BBM )

@@ -95,7 +95,7 @@ CONTAINS
          !                             !-------------------------!
       CASE( np_rhgBBM )                ! Brittle Bingham Maxwell !
          !                             !-------------------------!
-         CALL ice_dyn_rhg_bbm( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i, delta_i )
+         CALL ice_dyn_rhg_bbm( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i )
          !
       END SELECT
       !
