@@ -59,7 +59,7 @@
       !                               !     => 15 * 3600s * 24 * 20K
       nn_nbbm       = 100             !     number of BBM subcycles
       !
-      nn_d_adv      = 4               !     advection of damage @T & @F
+      nn_d_adv      = 4               !     advection of damage @T & @F at big time step
       !                               !        = 0 no advection at all!
       !                               !        = 1 advection of damage only at big time step
       !                               !        = 2 advection of damage + stress tensor components at big time step

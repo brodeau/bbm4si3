@@ -15,7 +15,7 @@
                   zCorio =   zMdt*zdtbbm * 2._wp*omega*SIN( rad*gphiu(ji,jj) ) * zV  !`zMdt*zdtbbm` => get mass, not mass*dt !
                   !
                   !                 !--- Sum of external forces (explicit solution) = F + tau_ia + Coriolis + spg + tau_io
-                  zRHS = zfUu(ji,jj) + ztaux_ai(ji,jj) + zCorio + zspgUu(ji,jj) + zTauO*zUo        ! unit is [Pa] = [kg.m-1.s-2]
+                  zRHS = zfUu(ji,jj) + ztaux_ai(ji,jj) + ridlzd*(zCorio + zspgUu(ji,jj)) + zTauO*zUo        ! unit is [Pa] = [kg.m-1.s-2]
                   !
                   Uu_sub(ji,jj) = ( (          ( zMdt * zU + zRHS )                                &
                      &                                      / MAX( zepsi, zMdt + zTauO )           &

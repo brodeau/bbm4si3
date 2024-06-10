@@ -4,7 +4,12 @@ MODULE icedyn_rhg_bbm
    !!   Sea-Ice dynamics : rheology Britle Maxwell X
    !!======================================================================
    !! History :
-   !!            4.2  !  2022     (L. Brodeau) `BBM` [starting from `icedyn_rhg_evp`]
+   !!            4.2  !  2024     (L. Brodeau) `BBM` [starting from `icedyn_rhg_evp`]
+   !!                   Please cite: Brodeau et al. 2024, 
+   !!                           "Implementation of a brittle sea-ice rheology in an Eulerian,
+   !!                            finite-difference, C-grid modeling framework: Impact on the
+   !!                            simulated deformation of sea-ice in the Arctic"
+   !!                            Geoscientific Model Development (GMD)
    !!----------------------------------------------------------------------
 #if defined key_si3
    !!----------------------------------------------------------------------
@@ -51,6 +56,7 @@ MODULE icedyn_rhg_bbm
       &                   reps12   = 1.e-12_wp,   &
       &                   reps24   = 1.e-24_wp
 
+   REAL(wp),  SAVE :: ridlzd
    REAL(wp),  SAVE :: rk0  ! factor to stiffness matrix => 1._wp / ( 1._wp - rz_nup*rz_nup)
    REAL(wp),  SAVE :: rk11, rk22, rk12, rk33 ! elements of stiffness matrix
    REAL(wp),  SAVE :: rlambda0, rsqrt_nu_rhoi, rsqrt_E0, rCe0 ! Constant part of Eq.28
@@ -98,6 +104,10 @@ CONTAINS
          WRITE(numout,*) '    *** Initialization of BBM rheology (ice_dyn_rhg_bbm_init) ***'
       ENDIF
 
+      ridlzd = 1._wp
+      IF(ln_idealized) ridlzd = 0._wp
+      IF( lwp ) WRITE(numout,*) '  * Disregarding Coriolis and SSH terms in momentum eq.:',ln_idealized,'=> ridlzd =',INT(ridlzd,1)
+      
       zrhoco   = rho0 * rn_cio
       zdtbbm   = rdt_ice / REAL( nn_nbbm, wp )
       z1_dtbbm = 1._wp / zdtbbm
@@ -194,8 +204,11 @@ CONTAINS
       Xdxt(:,:) = SQRT( e1t(:,:)*e2t(:,:) )  ! Local `dx` of grid cell [m]
       Xdxf(:,:) = SQRT( e1f(:,:)*e2f(:,:) )  ! Local `dx` of grid cell [m]
 
-      !! A typical `dx` for the full domain:
-      zdx_m = SUM(Xdxt(:,:)*xmskt(:,:)) / MAX( SUM(xmskt(:,:)) , reps6 ) ; ! => mean `dx` on this proc domain!
+      !! A typical `dx` for the Arctic:
+      zt1(:,:) = 0._wp
+      WHERE(gphit(:,:) > 70._wp) zt1(:,:) = 1._wp
+      zt1(:,:) = zt1(:,:)*xmskt(:,:)
+      zdx_m = SUM(Xdxt(:,:)*zt1(:,:)) / MAX( SUM(zt1(:,:)) , reps6 ) ; ! => mean `dx` on this proc domain!
       CALL mpp_sum( 'ice_dyn_rhg_bbm_init', zdx_m)
       zdx_m = zdx_m / REAL(jpnij)  ; ! => mean `dx` of full computational domain
       
@@ -204,7 +217,7 @@ CONTAINS
 
       IF( lwp ) THEN
          WRITE(numout,*) '  * Big time step (advection & thermo)  => rdt_ice  =', rdt_ice, ' [s]'
-         WRITE(numout,*) '  * Average `dx` of full computational domain => ', REAL(zdx_m/1000._wp,4), ' [km]'
+         WRITE(numout,*) '  * Average `dx` of computational domain north of 70N => ', REAL(zdx_m/1000._wp,4), ' [km]'
          WRITE(numout,*) '     ==> propagation speed of shearing elastic waves =>',  zce, '[m/s]'
          WRITE(numout,*) '     ==> the small time-step should therefore be about or below:', zdts, ' [s]'
          WRITE(numout,*) '     ==> that would the case with a `nbbm` >',INT(rdt_ice/zdts,1)
@@ -482,7 +495,7 @@ CONTAINS
          !
       ENDIF !IF( l_CN_is_2d )
 
-      ! --- Healing of damage with time [Eq.30, Olason et al., 2022]  !lili
+      ! --- Healing of damage with time [Eq.30, Olason et al., 2022]
       !     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
       ztmp3(:,:) = rcnd_i*hm_s(:,:) / MAX( rn_cnd_s*hm_i(:,:), reps6 ) * xmskt(:,:)   ! => `C` of the `dtemp/(1 + C)` in neXtSIM
       IF(iom_use('ice_heal_c'))  CALL iom_put( 'ice_heal_c' , ztmp3 )
