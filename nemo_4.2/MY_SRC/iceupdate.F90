@@ -32,6 +32,7 @@ MODULE iceupdate
    USE lbclnk         ! lateral boundary conditions (or mpp links)
    USE timing         ! Timing
    USE oce
+
    IMPLICIT NONE
    PRIVATE
 
@@ -39,8 +40,8 @@ MODULE iceupdate
    PUBLIC   ice_update_flx    ! called by ice_stp
    PUBLIC   ice_update_tau    ! called by ice_stp
 
-   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:) ::   utau_oce, vtau_oce   ! air-ocean surface i- & j-stress       [N/m2]
-   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:) ::   tmod_io              ! modulus of the ice-ocean velocity @T  [m/s]
+   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:) ::   utau_oce, vtau_oce   ! air-ocean surface i- & j-stress     [N/m2]
+   REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:) ::   tmod_io              ! modulus of the ice-ocean velocity   [m/s]
 
    !! * Substitutions
 #  include "do_loop_substitute.h90"
@@ -91,8 +92,7 @@ CONTAINS
       !
       INTEGER  ::   ji, jj, jl, jk   ! dummy loop indices
       REAL(wp) ::   zqsr             ! New solar flux received by the ocean
-      !REAL(wp), ALLOCATABLE, DIMENSION(:,:) ::   z2d                  ! 2D workspace
-      REAL(wp), DIMENSION(jpi,jpj) ::   z2d                  ! 2D workspace
+      REAL(wp), DIMENSION(jpi,jpj) ::   z2d                  ! 2D workspace  !#bbm
       !!---------------------------------------------------------------------
       IF( ln_timing )   CALL timing_start('iceupdate')
 
@@ -239,14 +239,14 @@ CONTAINS
       CALL iom_put( 'vfxsub_err', wfx_err_sub )   ! "excess" of sublimation sent to ocean
 
       IF ( iom_use( 'vfxthin' ) ) THEN   ! mass flux from ice growth in open water + thin ice (<20cm) => comparable to observations
-         !ALLOCATE( z2d(jpi,jpj) )
+         !#bbm:
          WHERE( hm_i(:,:) < 0.2 .AND. hm_i(:,:) > 0. )
             z2d = wfx_bog
          ELSEWHERE
             z2d = 0._wp
          END WHERE
          CALL iom_put( 'vfxthin', wfx_opw + z2d )
-         !DEALLOCATE( z2d )
+         !#bbm.
       ENDIF
 
       !                            ! vfxsnw = vfxsnw_sni + vfxsnw_dyn + vfxsnw_sum
@@ -260,7 +260,7 @@ CONTAINS
       ! --- heat fluxes [W/m2] --- !
       !                              ! qt_atm_oi - qt_oce_ai = hfxdhc - ( dihctrp + dshctrp )
 
-      !LB:
+      !#bbm:
       z2d(:,:) = tmask(:,:,1)
       !!
       IF( iom_use('qsr_oce_si') .OR. iom_use('qns_oce_si') .OR. iom_use('qemp_oce_si') .OR. iom_use('qns_atmo') ) THEN
@@ -273,8 +273,9 @@ CONTAINS
          !!
          z2d(:,:) = tmask(:,:,1)
       ENDIF
-      !LB.
+      !#bbm.
 
+      !#bbm:
       IF( iom_use('qsr_oce'    ) ) CALL iom_put( 'qsr_oce'    , (qsr_oce * ( 1._wp - at_i_b )                              ) * z2d ) !     solar flux at ocean surface
       IF( iom_use('qns_oce'    ) ) CALL iom_put( 'qns_oce'    , (qns_oce * ( 1._wp - at_i_b ) + qemp_oce                   ) * z2d ) ! non-solar flux at ocean surface
       IF( iom_use('qsr_ice'    ) ) CALL iom_put( 'qsr_ice'    , (SUM( qsr_ice * a_i_b, dim=3 )                             ) * z2d ) !     solar flux at ice surface
@@ -287,6 +288,7 @@ CONTAINS
       IF( iom_use('qt_atm_oi'  ) ) CALL iom_put( 'qt_atm_oi'  , qt_atm_oi                                                    * z2d ) ! total heat flux at the oce-ice surface: interface atm-(ice+oce)
       IF( iom_use('qemp_oce'   ) ) CALL iom_put( 'qemp_oce'   , (qemp_oce                                                  ) * z2d ) ! Downward Heat Flux from E-P over ocean
       IF( iom_use('qemp_ice'   ) ) CALL iom_put( 'qemp_ice'   , (qemp_ice                                                  ) * z2d ) ! Downward Heat Flux from E-P over ice
+      !#bbm.
 
       ! heat fluxes from ice transformations
       !                            ! hfxdhc = hfxbog + hfxbom + hfxsum + hfxopw + hfxdif + hfxsnw - ( hfxthd + hfxdyn + hfxres + hfxsub + hfxspr )
@@ -366,6 +368,7 @@ CONTAINS
          WRITE(numout,*)'~~~~~~~~~~~~~~'
       ENDIF
 
+      !IF(lwp) PRINT *, 'LOLO: USING ICE-WATER DRAG COEF OF:', rn_cio
       zrhoco = rho0 * rn_cio
       !
       IF( MOD( kt-1, nn_fsbc ) == 0 ) THEN     !==  Ice time-step only  ==!   (i.e. surface module time-step)
@@ -388,10 +391,12 @@ CONTAINS
       !
       !                                      !==  every ocean time-step  ==!
       IF ( ln_drgice_imp ) THEN
+         !IF(lwp) PRINT *, 'LOLO: USING IMPLICIT ICE-OCEAN DRAG!'
          ! Save drag with right sign to update top drag in the ocean implicit friction
          rCdU_ice(:,:) = -r1_rho0 * tmod_io(:,:) * at_i(:,:) * tmask(:,:,1)
          zflagi = 0._wp
       ELSE
+         !IF(lwp) PRINT *, 'LOLO: NOT USING IMPLICIT ICE-OCEAN DRAG!'
          zflagi = 1._wp
       ENDIF
       !

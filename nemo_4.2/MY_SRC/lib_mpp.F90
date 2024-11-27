@@ -1578,8 +1578,9 @@ CONTAINS
       ELSE IF( TRIM(cdstat) == 'APPEND' )  THEN   ! cdstat can have less than 6 characters
          OPEN( UNIT=knum, FILE=clfile, FORM=cdform, ACCESS=cdacce, STATUS='UNKNOWN', POSITION='APPEND', ERR=100, IOSTAT=iost )
       ELSE
-         !LOLO:OPEN( UNIT=knum, FILE=clfile, FORM=cdform, ACCESS=cdacce, STATUS=cdstat                      , ERR=100, IOSTAT=iost )
+         !#bbm:
          OPEN( UNIT=knum, FILE=clfile, FORM=cdform, ACCESS=cdacce, STATUS=cdstat, RECL=512            , ERR=100, IOSTAT=iost )  ; !lolo
+         !#bbm.
       ENDIF
       IF( iost /= 0 .AND. TRIM(clfile) == '/dev/null' ) &   ! for windows
          &  OPEN(UNIT=knum,FILE='NUL', FORM=cdform, ACCESS=cdacce, STATUS=cdstat                      , ERR=100, IOSTAT=iost )

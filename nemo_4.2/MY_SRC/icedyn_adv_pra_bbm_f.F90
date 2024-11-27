@@ -1,8 +1,6 @@
-!#modif
 MODULE icedyn_adv_pra_bbm_f
 
-
-   !!BBM => advects `damage@F` only!
+   !!BBM => advects damage and stress tensor components @T-point
 
    !!======================================================================
    !!                       ***  MODULE icedyn_adv_pra_bbm_f   ***
@@ -83,7 +81,7 @@ CONTAINS
       REAL(wp), DIMENSION(jpi,jpj)            ::   z0di, z0d1, z0d2, z0d3
       INTEGER :: ji, jj
       CHARACTER(len=32) :: cstr
-      CHARACTER(len=19), PARAMETER :: crtnnm = 'ice_dyn_adv_pra_f_d'
+      CHARACTER(len=19), PARAMETER :: crtnm = 'ice_dyn_adv_pra_f_d'
       CHARACTER(len=1),  PARAMETER :: cgrt    = 'F'
       !!----------------------------------------------------------------------
       !
@@ -91,7 +89,7 @@ CONTAINS
       !
       cstr = 'Prather advection scheme for BBM (damage only)'
       IF(l_advect_sigma) cstr = 'Prather advection scheme for BBM (damage and stresses )'
-      IF( kt == nit000 .AND. lwp ) WRITE(numout,*) '-- '//crtnnm//': '//TRIM(cstr)//' at '//cgrt//'-points'      
+      IF( kt == nit000 .AND. lwp ) WRITE(numout,*) '-- '//crtnm//': '//TRIM(cstr)//' at '//cgrt//'-points'
       !
       ! --- If ice drift is too fast, use  subtime steps for advection (CFL test for stability) --- !
       !        Note: the advection split is applied at the next time-step in order to avoid blocking global comm.
@@ -100,7 +98,7 @@ CONTAINS
       zcflnow(1) = MAX( zcflnow(1), MAXVAL( ABS( pv_ice(:,:) ) * rDt_ice * r1_e2u(:,:) ) )
 
       ! non-blocking global communication send zcflnow and receive zcflprv
-      CALL mpp_delay_max( crtnnm, 'cflice', zcflnow(:), zcflprv(:), kt == nitend - nn_fsbc + 1 )
+      CALL mpp_delay_max( crtnm, 'cflice', zcflnow(:), zcflprv(:), kt == nitend - nn_fsbc + 1 )
 
       IF( zcflprv(1) > .5 ) THEN
          icycle = 2
@@ -161,7 +159,7 @@ CONTAINS
          ! --- Lateral boundary conditions --- !
          !     caution: for gradients (sx and sy) the sign changes
          IF(l_advect_sigma) THEN
-            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
+            CALL lbc_lnk( crtnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
                &                , sxx1md, cgrt, 1._wp, syy1md, cgrt,  1._wp, sxy1md, cgrt,  1._wp  &
                &                ,   z0d1, cgrt, 1._wp, sxdd1 , cgrt, -1._wp, sydd1 , cgrt, -1._wp  &
                &                , sxxdd1, cgrt, 1._wp, syydd1, cgrt,  1._wp, sxydd1, cgrt,  1._wp  &
@@ -170,10 +168,10 @@ CONTAINS
                &                ,   z0d3, cgrt, 1._wp, sxdd3 , cgrt, -1._wp, sydd3 , cgrt, -1._wp  &
                &                , sxxdd3, cgrt, 1._wp, syydd3, cgrt,  1._wp, sxydd3, cgrt,  1._wp  )
          ELSE
-            CALL lbc_lnk( crtnnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
-               &                , sxx1md, cgrt, 1._wp, syy1md, cgrt,  1._wp, sxy1md, cgrt,  1._wp  )            
+            CALL lbc_lnk( crtnm,   z0di, cgrt, 1._wp, sx1md , cgrt, -1._wp, sy1md , cgrt, -1._wp  &
+               &                , sxx1md, cgrt, 1._wp, syy1md, cgrt,  1._wp, sxy1md, cgrt,  1._wp  )
          ENDIF
-         
+
          ! --- Recover the properties from their contents --- !
          zarea(:,:) = r1_e1e2f(:,:) * xmskf(:,:)
          p1md (:,:) = z0di (:,:) * zarea(:,:) !#bbm
@@ -182,9 +180,9 @@ CONTAINS
             pdd2 (:,:) = z0d2 (:,:) * zarea(:,:) !#bbm
             pdd3 (:,:) = z0d3 (:,:) * zarea(:,:) !#bbm
          END IF
-         
+
          p1md(:,:) = MIN( MAX( p1md(:,:), 1._wp - rn_dmg_max ) , 1._wp ) !! `p1md` is `1-damage` !!!
-         
+
       END DO !DO jt = 1, icycle
       !
       IF( lrst_ice )   CALL adv_pra_f_d_rst( 'WRITE', kt )   !* write Prather fields in the restart file
@@ -192,7 +190,7 @@ CONTAINS
    END SUBROUTINE ice_dyn_adv_pra_f_d
 
 
-   SUBROUTINE adv_x( pdt, pui, pcrh, psm, ps0, psx, psxx, psy, psyy, psxy )
+   SUBROUTINE adv_x( pdt, puf, pcrh, psm, ps0, psx, psxx, psy, psyy, psxy )
       !!----------------------------------------------------------------------
       !!                **  routine adv_x  **
       !!
@@ -201,7 +199,7 @@ CONTAINS
       !!----------------------------------------------------------------------
       REAL(wp)                , INTENT(in   ) ::   pdt                ! the time step
       REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
-      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pui                ! i-direction ice velocity at V-point [m/s]
+      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   puf                ! i-direction ice velocity at V-point [m/s]
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psx , psy          ! 1st moments
@@ -229,8 +227,8 @@ CONTAINS
             !! Only `ji+1` needed
             !! => [0:jpi-1] for `ji` !
             zmask = xmskf(ji,jj)
-            zU = pui(ji+1,jj)
-
+            zU    = puf(ji+1,jj)
+            !
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
             zpsx  = psx (ji,jj)
@@ -273,7 +271,6 @@ CONTAINS
             zfy (ji,jj)  =  zalf  * ( zpsy  + zalf1 * zpsxy )
             zfxy(ji,jj)  =  zalfq *   zpsxy
             zfyy(ji,jj)  =  zalf  *   zpsyy
-
             !                                !  Readjust moments remaining in the box.
             zpsm  =  zpsm  - zfm(ji,jj)
             zps0  =  zps0  - zf0(ji,jj)
@@ -308,7 +305,7 @@ CONTAINS
       DO_2D( 1, 0, kj0, kj0 )
             !! Only `ji+1` needed
             !! => [0:jpi-1] for `ji` !
-            zU = pui(ji+1,jj)
+            zU = puf(ji+1,jj)
             !                                !  Flux from i+1 to i when u LT 0.
             zalf          = MAX( 0._wp, -zU ) * pdt / psm(ji+1,jj)
             zalg  (ji,jj) = zalf
@@ -404,7 +401,7 @@ CONTAINS
    END SUBROUTINE adv_x
 
 
-   SUBROUTINE adv_y( pdt, pvi, pcrh, psm, ps0, psx, psxx, psy , psyy, psxy )
+   SUBROUTINE adv_y( pdt, pvf, pcrh, psm, ps0, psx, psxx, psy , psyy, psxy )
       !!---------------------------------------------------------------------
       !!                **  routine adv_y  **
       !!
@@ -413,7 +410,7 @@ CONTAINS
       !!---------------------------------------------------------------------
       REAL(wp)                , INTENT(in   ) ::   pdt                ! time step
       REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
-      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pvi                ! j-direction ice velocity at U-point [m/s]
+      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pvf                ! j-direction ice velocity at U-point [m/s]
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psx , psy          ! 1st moments
@@ -442,7 +439,7 @@ CONTAINS
             !! => [0:jpj-1] for `jj` !
             !
             zmask = xmskf(ji,jj)
-            zV = pvi(ji,jj+1)
+            zV    = pvf(ji,jj+1)
             !
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
@@ -516,7 +513,7 @@ CONTAINS
       DO_2D( ki0, ki0, 1, 0 )
             !! Only `jj+1` needed
             !! => [0:jpj-1] for `jj` !
-            zV = pvi(ji,jj+1)
+            zV = pvf(ji,jj+1)
             !                                !  Flux from j+1 to j when v LT 0.
             zalf          = MAX( 0._wp, -zV ) * pdt / psm(ji,jj+1)
             zalg  (ji,jj) = zalf
@@ -528,7 +525,7 @@ CONTAINS
             !
             zfm   (ji,jj) = zfm (ji,jj) + zalf  *    psm (ji,jj+1)
             zf0   (ji,jj) = zf0 (ji,jj) + zalf  * (  ps0 (ji,jj+1) &
-               &                                   - zalf1 * (psy(ji,jj+1) - (zalf1 - zalf ) * psyy(ji,jj+1) ) )
+               &            - zalf1 * (psy(ji,jj+1) - (zalf1 - zalf ) * psyy(ji,jj+1) ) )
             zfy   (ji,jj) = zfy (ji,jj) + zalfq * (  psy (ji,jj+1) - 3.0 * zalf1 * psyy(ji,jj+1) )
             zfyy  (ji,jj) = zfyy(ji,jj) + zalf  *    psyy(ji,jj+1) * zalfq
             zfx   (ji,jj) = zfx (ji,jj) + zalf  * (  psx (ji,jj+1) - zalf1 * psxy(ji,jj+1) )
@@ -620,7 +617,7 @@ CONTAINS
       !! ** Purpose :   allocate and initialize arrays for Prather advection
       !!-------------------------------------------------------------------
       INTEGER ::   ierr
-      CHARACTER(len=16), PARAMETER :: crtnnm = 'adv_pra_f_d_init'
+      CHARACTER(len=16), PARAMETER :: crtnm = 'adv_pra_f_d_init'
       !!-------------------------------------------------------------------
 
       !                             !* allocate prather fields
@@ -629,8 +626,8 @@ CONTAINS
          &      sxdd2(jpi,jpj), sydd2(jpi,jpj), sxxdd2(jpi,jpj), syydd2(jpi,jpj), sxydd2(jpi,jpj) , &
          &      sxdd3(jpi,jpj), sydd3(jpi,jpj), sxxdd3(jpi,jpj), syydd3(jpi,jpj), sxydd3(jpi,jpj) , &
          &      STAT = ierr )
-      CALL mpp_sum( crtnnm, ierr )
-      IF( ierr /= 0 )   CALL ctl_stop('STOP', crtnnm//' : unable to allocate 1md array for Prather advection scheme')
+      CALL mpp_sum( crtnm, ierr )
+      IF( ierr /= 0 )   CALL ctl_stop('STOP', crtnm//' : unable to allocate 1md array for Prather advection scheme')
       !
       CALL adv_pra_f_d_rst( 'READ' )    !* read or initialize all required files
       !

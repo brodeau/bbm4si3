@@ -91,6 +91,7 @@ CONTAINS
       REAL(wp), DIMENSION(1)                  ::   zcflprv, zcflnow   ! for global communication
       REAL(wp), DIMENSION(jpi,jpj)            ::   zati1, zati2
       REAL(wp), DIMENSION(jpi,jpj)            ::   zudy, zvdx
+      REAL(wp), DIMENSION(jpi,jpj)            ::   z2d
       REAL(wp), DIMENSION(jpi,jpj,jpl)        ::   zhi_max, zhs_max, zhip_max, zs_i, zsi_max
       REAL(wp), DIMENSION(jpi,jpj,nlay_i,jpl) ::   ze_i, zei_max
       REAL(wp), DIMENSION(jpi,jpj,nlay_s,jpl) ::   ze_s, zes_max
@@ -174,14 +175,16 @@ CONTAINS
          ! record at_i before advection (for open water)
          zati1(:,:) = SUM( pa_i(:,:,:), dim=3 )
 
+         z2d(:,:) = e1e2t(:,:)  ! cell area !
+
          ! --- transported fields --- !
          DO jl = 1, jpl
-            zarea(:,:,jl) = e1e2t(:,:)
-            z0snw(:,:,jl) = pv_s (:,:,jl) * e1e2t(:,:)        ! Snow volume
-            z0ice(:,:,jl) = pv_i (:,:,jl) * e1e2t(:,:)        ! Ice  volume
-            z0ai (:,:,jl) = pa_i (:,:,jl) * e1e2t(:,:)        ! Ice area
-            z0smi(:,:,jl) = psv_i(:,:,jl) * e1e2t(:,:)        ! Salt content
-            z0oi (:,:,jl) = poa_i(:,:,jl) * e1e2t(:,:)        ! Age content
+            zarea(:,:,jl) = z2d(:,:)
+            z0snw(:,:,jl) = pv_s (:,:,jl) * z2d(:,:)        ! Snow volume
+            z0ice(:,:,jl) = pv_i (:,:,jl) * z2d(:,:)        ! Ice  volume
+            z0ai (:,:,jl) = pa_i (:,:,jl) * z2d(:,:)        ! Ice area
+            z0smi(:,:,jl) = psv_i(:,:,jl) * z2d(:,:)        ! Salt content
+            z0oi (:,:,jl) = poa_i(:,:,jl) * z2d(:,:)        ! Age content
             DO jk = 1, nlay_s
                z0es(:,:,jk,jl) = pe_s(:,:,jk,jl) * e1e2t(:,:) ! Snow heat content
             END DO
@@ -305,23 +308,24 @@ CONTAINS
          ENDIF
 
          ! --- Recover the properties from their contents --- !
+         z2d(:,:) = r1_e1e2t(:,:) * tmask(:,:,1)
          DO jl = 1, jpl
-            pv_i (:,:,jl) = z0ice(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
-            pv_s (:,:,jl) = z0snw(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
-            psv_i(:,:,jl) = z0smi(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
-            poa_i(:,:,jl) = z0oi (:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
-            pa_i (:,:,jl) = z0ai (:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
+            pv_i (:,:,jl) = z0ice(:,:,jl) * z2d(:,:)
+            pv_s (:,:,jl) = z0snw(:,:,jl) * z2d(:,:)
+            psv_i(:,:,jl) = z0smi(:,:,jl) * z2d(:,:)
+            poa_i(:,:,jl) = z0oi (:,:,jl) * z2d(:,:)
+            pa_i (:,:,jl) = z0ai (:,:,jl) * z2d(:,:)
             DO jk = 1, nlay_s
-               pe_s(:,:,jk,jl) = z0es(:,:,jk,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
+               pe_s(:,:,jk,jl) = z0es(:,:,jk,jl) * z2d(:,:)
             END DO
             DO jk = 1, nlay_i
-               pe_i(:,:,jk,jl) = z0ei(:,:,jk,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
+               pe_i(:,:,jk,jl) = z0ei(:,:,jk,jl) * z2d(:,:)
             END DO
             IF ( ln_pnd_LEV .OR. ln_pnd_TOPO ) THEN
-               pa_ip(:,:,jl) = z0ap(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
-               pv_ip(:,:,jl) = z0vp(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
+               pa_ip(:,:,jl) = z0ap(:,:,jl) * z2d(:,:)
+               pv_ip(:,:,jl) = z0vp(:,:,jl) * z2d(:,:)
                IF ( ln_pnd_lids ) THEN
-                  pv_il(:,:,jl) = z0vl(:,:,jl) * r1_e1e2t(:,:) * tmask(:,:,1)
+                  pv_il(:,:,jl) = z0vl(:,:,jl) * z2d(:,:)
                ENDIF
             ENDIF
          END DO
@@ -329,8 +333,8 @@ CONTAINS
          ! derive open water from ice concentration
          zati2(:,:) = SUM( pa_i(:,:,:), dim=3 )
          DO_2D( 0, 0, 0, 0 )
-            pato_i(ji,jj) = pato_i(ji,jj) - ( zati2(ji,jj) - zati1(ji,jj) ) &                        !--- open water
-               &                          - ( zudy(ji,jj) - zudy(ji-1,jj) + zvdx(ji,jj) - zvdx(ji,jj-1) ) * r1_e1e2t(ji,jj) * zdt
+               pato_i(ji,jj) = pato_i(ji,jj) - ( zati2(ji,jj) - zati1(ji,jj) ) &                        !--- open water
+                  &                          - ( zudy(ji,jj) - zudy(ji-1,jj) + zvdx(ji,jj) - zvdx(ji,jj-1) ) * r1_e1e2t(ji,jj) * zdt
          END_2D
          CALL lbc_lnk( crtnm, pato_i, cgrt,  1.0_wp )
          !
@@ -357,15 +361,14 @@ CONTAINS
          ! --- Ensure snow load is not too big --- !
          CALL Hsnow( zdt, pv_i, pv_s, pa_i, pa_ip, pe_s )
          !
-      END DO
+      END DO !DO jt = 1, icycle
       !
       IF( lrst_ice )   CALL adv_pra_rst( 'WRITE', kt )   !* write Prather fields in the restart file
       !
    END SUBROUTINE ice_dyn_adv_pra
 
 
-   SUBROUTINE adv_x( pdt, put , pcrh, psm , ps0 ,   &
-      &              psx, psxx, psy , psyy, psxy )
+   SUBROUTINE adv_x( pdt, put, pcrh, psm, ps0, psx, psxx, psy, psyy, psxy )
       !!----------------------------------------------------------------------
       !!                **  routine adv_x  **
       !!
@@ -387,6 +390,7 @@ CONTAINS
       REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !   -      -
       REAL(wp) ::   zpsm, zps0
       REAL(wp) ::   zpsx, zpsy, zpsxx, zpsyy, zpsxy
+      REAL(wp) ::   zmask, zU
       REAL(wp), DIMENSION(jpi,jpj) ::   zf0 , zfx  , zfy   , zbet   ! 2D workspace
       REAL(wp), DIMENSION(jpi,jpj) ::   zfm , zfxx , zfyy  , zfxy   !  -      -
       REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q         !  -      -
@@ -403,7 +407,9 @@ CONTAINS
       ! Limitation of moments.
       DO_2D( 1, 1, kj0, kj0 )
            !! => whole domain for `ji` !
-
+            zmask = tmask(ji,jj,1)
+            zU    = put(ji,jj)
+            !
             zpsm  = psm (ji,jj,jl) ! optimization
             zps0  = ps0 (ji,jj,jl)
             zpsx  = psx (ji,jj,jl)
@@ -419,7 +425,7 @@ CONTAINS
             zs1max  = 1.5 * zslpmax
             zs1new  = MIN( zs1max, MAX( -zs1max, zpsx ) )
             zs2new  = MIN( 2.0 * zslpmax - 0.3334 * ABS( zs1new ), MAX( ABS( zs1new ) - zslpmax, zpsxx ) )
-            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * tmask(ji,jj,1)   ! Case of empty boxes & Apply mask
+            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * zmask ! Case of empty boxes & Apply mask
 
             zps0  = zslpmax
             zpsx  = zs1new  * rswitch
@@ -430,8 +436,8 @@ CONTAINS
 
             !  Calculate fluxes and moments between boxes i<-->i+1
             !                                !  Flux from i to i+1 WHEN u GT 0
-            zbet(ji,jj)  =  MAX( 0._wp, SIGN( 1._wp, put(ji,jj) ) )
-            zalf         =  MAX( 0._wp, put(ji,jj) ) * pdt / zpsm
+            zbet(ji,jj)  =  MAX( 0._wp, SIGN( 1._wp, zU ) )
+            zalf         =  MAX( 0._wp, zU ) * pdt / zpsm
             zalfq        =  zalf * zalf
             zalf1        =  1.0 - zalf
             zalf1q       =  zalf1 * zalf1
@@ -443,7 +449,6 @@ CONTAINS
             zfy (ji,jj)  =  zalf  * ( zpsy  + zalf1 * zpsxy )
             zfxy(ji,jj)  =  zalfq *   zpsxy
             zfyy(ji,jj)  =  zalf  *   zpsyy
-
             !                                !  Readjust moments remaining in the box.
             zpsm  =  zpsm  - zfm(ji,jj)
             zps0  =  zps0  - zf0(ji,jj)
@@ -466,8 +471,9 @@ CONTAINS
       DO_2D( 1, 0, kj0, kj0 )
             !! Only `ji+1` needed
             !! => [0:jpi-1] for `ji` !
+            zU = put(ji,jj)
             !                                !  Flux from i+1 to i when u LT 0.
-            zalf          = MAX( 0._wp, -put(ji,jj) ) * pdt / psm(ji+1,jj,jl)
+            zalf          = MAX( 0._wp, -zU ) * pdt / psm(ji+1,jj,jl)
             zalg  (ji,jj) = zalf
             zalfq         = zalf * zalf
             zalf1         = 1.0 - zalf
@@ -477,7 +483,7 @@ CONTAINS
             !
             zfm   (ji,jj) = zfm (ji,jj) + zalf  *    psm (ji+1,jj,jl)
             zf0   (ji,jj) = zf0 (ji,jj) + zalf  * (  ps0 (ji+1,jj,jl) &
-               &                                   - zalf1 * ( psx(ji+1,jj,jl) - (zalf1 - zalf ) * psxx(ji+1,jj,jl) ) )
+               &            - zalf1 * ( psx(ji+1,jj,jl) - (zalf1 - zalf ) * psxx(ji+1,jj,jl) ) )
             zfx   (ji,jj) = zfx (ji,jj) + zalfq * (  psx (ji+1,jj,jl) - 3.0 * zalf1 * psxx(ji+1,jj,jl) )
             zfxx  (ji,jj) = zfxx(ji,jj) + zalf  *    psxx(ji+1,jj,jl) * zalfq
             zfy   (ji,jj) = zfy (ji,jj) + zalf  * (  psy (ji+1,jj,jl) - zalf1 * psxy(ji+1,jj,jl) )
@@ -584,6 +590,7 @@ CONTAINS
       REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !    -         -
       REAL(wp) ::   zpsm, zps0
       REAL(wp) ::   zpsx, zpsy, zpsxx, zpsyy, zpsxy
+      REAL(wp) ::   zmask, zV
       REAL(wp), DIMENSION(jpi,jpj) ::   zf0, zfx , zfy , zbet   ! 2D workspace
       REAL(wp), DIMENSION(jpi,jpj) ::   zfm, zfxx, zfyy, zfxy   !  -      -
       REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q     !  -      -
@@ -601,6 +608,9 @@ CONTAINS
       DO_2D( ki0, ki0, 1, 1 )
             !! => whole domain for `jj` !
             !
+            zmask = tmask(ji,jj,1)
+            zV    = pvt(ji,jj)
+            !
             zpsm  = psm (ji,jj,jl) ! optimization
             zps0  = ps0 (ji,jj,jl)
             zpsx  = psx (ji,jj,jl)
@@ -616,7 +626,7 @@ CONTAINS
             zs1max  = 1.5 * zslpmax
             zs1new  = MIN( zs1max, MAX( -zs1max, zpsy ) )
             zs2new  = MIN( ( 2.0 * zslpmax - 0.3334 * ABS( zs1new ) ), MAX( ABS( zs1new )-zslpmax, zpsyy ) )
-            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * tmask(ji,jj,1)   ! Case of empty boxes & Apply mask
+            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * zmask   ! Case of empty boxes & Apply mask
             !
             zps0  = zslpmax
             zpsx  = zpsx  * rswitch
@@ -627,8 +637,8 @@ CONTAINS
 
             !  Calculate fluxes and moments between boxes j<-->j+1
             !                                !  Flux from j to j+1 WHEN v GT 0
-            zbet(ji,jj)  =  MAX( 0._wp, SIGN( 1._wp, pvt(ji,jj) ) )
-            zalf         =  MAX( 0._wp, pvt(ji,jj) ) * pdt / zpsm
+            zbet(ji,jj)  =  MAX( 0._wp, SIGN( 1._wp, zV ) )
+            zalf         =  MAX( 0._wp, zV ) * pdt / zpsm
             zalfq        =  zalf * zalf
             zalf1        =  1.0 - zalf
             zalf1q       =  zalf1 * zalf1
@@ -662,8 +672,9 @@ CONTAINS
       DO_2D( ki0, ki0, 1, 0 )
             !! Only `jj+1` needed
             !! => [0:jpj-1] for `jj` !
+            zV = pvt(ji,jj)
             !                                !  Flux from j+1 to j when v LT 0.
-            zalf          = MAX( 0._wp, -pvt(ji,jj) ) * pdt / psm(ji,jj+1,jl)
+            zalf          = MAX( 0._wp, -zV ) * pdt / psm(ji,jj+1,jl)
             zalg  (ji,jj) = zalf
             zalfq         = zalf * zalf
             zalf1         = 1.0 - zalf
@@ -673,7 +684,7 @@ CONTAINS
             !
             zfm   (ji,jj) = zfm (ji,jj) + zalf  *    psm (ji,jj+1,jl)
             zf0   (ji,jj) = zf0 (ji,jj) + zalf  * (  ps0 (ji,jj+1,jl) &
-               &                                   - zalf1 * (psy(ji,jj+1,jl) - (zalf1 - zalf ) * psyy(ji,jj+1,jl) ) )
+               &            - zalf1 * (psy(ji,jj+1,jl) - (zalf1 - zalf ) * psyy(ji,jj+1,jl) ) )
             zfy   (ji,jj) = zfy (ji,jj) + zalfq * (  psy (ji,jj+1,jl) - 3.0 * zalf1 * psyy(ji,jj+1,jl) )
             zfyy  (ji,jj) = zfyy(ji,jj) + zalf  *    psyy(ji,jj+1,jl) * zalfq
             zfx   (ji,jj) = zfx (ji,jj) + zalf  * (  psx (ji,jj+1,jl) - zalf1 * psxy(ji,jj+1,jl) )
@@ -684,7 +695,6 @@ CONTAINS
       DO_2D( ki0, ki0, 0, 1 )
             !! Only `jj-1` needed
             !! => [2:jpj] for `jj` !
-
             !                                !  Readjust moments remaining in the box.
             zbt  =         zbet(ji,jj-1)
             zbt1 = ( 1.0 - zbet(ji,jj-1) )
@@ -790,76 +800,76 @@ CONTAINS
       !
       DO jl = 1, jpl
          DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
-            IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
-               !
-               !                               ! -- check h_ip -- !
-               ! if h_ip is larger than the surrounding 9 pts => reduce h_ip and increase a_ip
-               IF( ln_pnd_LEV .OR. ln_pnd_TOPO .AND. pv_ip(ji,jj,jl) > 0._wp ) THEN
-                  zhip = pv_ip(ji,jj,jl) / MAX( epsi20, pa_ip(ji,jj,jl) )
-                  IF( zhip > phip_max(ji,jj,jl) .AND. pa_ip(ji,jj,jl) < 0.15 ) THEN
-                     pa_ip(ji,jj,jl) = pv_ip(ji,jj,jl) / phip_max(ji,jj,jl)
+               IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
+                  !
+                  !                               ! -- check h_ip -- !
+                  ! if h_ip is larger than the surrounding 9 pts => reduce h_ip and increase a_ip
+                  IF( ln_pnd_LEV .OR. ln_pnd_TOPO .AND. pv_ip(ji,jj,jl) > 0._wp ) THEN
+                     zhip = pv_ip(ji,jj,jl) / MAX( epsi20, pa_ip(ji,jj,jl) )
+                     IF( zhip > phip_max(ji,jj,jl) .AND. pa_ip(ji,jj,jl) < 0.15 ) THEN
+                        pa_ip(ji,jj,jl) = pv_ip(ji,jj,jl) / phip_max(ji,jj,jl)
+                     ENDIF
                   ENDIF
-               ENDIF
-               !
-               !                               ! -- check h_i -- !
-               ! if h_i is larger than the surrounding 9 pts => reduce h_i and increase a_i
-               zhi = pv_i(ji,jj,jl) / pa_i(ji,jj,jl)
-               IF( zhi > phi_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
-                  pa_i(ji,jj,jl) = pv_i(ji,jj,jl) / MIN( phi_max(ji,jj,jl), hi_max(jpl) )   !-- bound h_i to hi_max (99 m)
-               ENDIF
-               !
-               !                               ! -- check h_s -- !
-               ! if h_s is larger than the surrounding 9 pts => put the snow excess in the ocean
-               zhs = pv_s(ji,jj,jl) / pa_i(ji,jj,jl)
-               IF( pv_s(ji,jj,jl) > 0._wp .AND. zhs > phs_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
-                  zfra = phs_max(ji,jj,jl) / MAX( zhs, epsi20 )
                   !
-                  wfx_res(ji,jj) = wfx_res(ji,jj) + ( pv_s(ji,jj,jl) - pa_i(ji,jj,jl) * phs_max(ji,jj,jl) ) * rhos * z1_dt
-                  hfx_res(ji,jj) = hfx_res(ji,jj) - SUM( pe_s(ji,jj,1:nlay_s,jl) ) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
+                  !                               ! -- check h_i -- !
+                  ! if h_i is larger than the surrounding 9 pts => reduce h_i and increase a_i
+                  zhi = pv_i(ji,jj,jl) / pa_i(ji,jj,jl)
+                  IF( zhi > phi_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
+                     pa_i(ji,jj,jl) = pv_i(ji,jj,jl) / MIN( phi_max(ji,jj,jl), hi_max(jpl) )   !-- bound h_i to hi_max (99 m)
+                  ENDIF
                   !
-                  pe_s(ji,jj,1:nlay_s,jl) = pe_s(ji,jj,1:nlay_s,jl) * zfra
-                  pv_s(ji,jj,jl)          = pa_i(ji,jj,jl) * phs_max(ji,jj,jl)
+                  !                               ! -- check h_s -- !
+                  ! if h_s is larger than the surrounding 9 pts => put the snow excess in the ocean
+                  zhs = pv_s(ji,jj,jl) / pa_i(ji,jj,jl)
+                  IF( pv_s(ji,jj,jl) > 0._wp .AND. zhs > phs_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
+                     zfra = phs_max(ji,jj,jl) / MAX( zhs, epsi20 )
+                     !
+                     wfx_res(ji,jj) = wfx_res(ji,jj) + ( pv_s(ji,jj,jl) - pa_i(ji,jj,jl) * phs_max(ji,jj,jl) ) * rhos * z1_dt
+                     hfx_res(ji,jj) = hfx_res(ji,jj) - SUM( pe_s(ji,jj,1:nlay_s,jl) ) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
+                     !
+                     pe_s(ji,jj,1:nlay_s,jl) = pe_s(ji,jj,1:nlay_s,jl) * zfra
+                     pv_s(ji,jj,jl)          = pa_i(ji,jj,jl) * phs_max(ji,jj,jl)
+                  ENDIF
+                  !
+                  !                               ! -- check s_i -- !
+                  ! if s_i is larger than the surrounding 9 pts => put salt excess in the ocean
+                  zsi = psv_i(ji,jj,jl) / pv_i(ji,jj,jl)
+                  IF( zsi > psi_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
+                     zfra = psi_max(ji,jj,jl) / zsi
+                     sfx_res(ji,jj) = sfx_res(ji,jj) + psv_i(ji,jj,jl) * ( 1._wp - zfra ) * rhoi * z1_dt
+                     psv_i(ji,jj,jl) = psv_i(ji,jj,jl) * zfra
+                  ENDIF
+                  !
                ENDIF
-               !
-               !                               ! -- check s_i -- !
-               ! if s_i is larger than the surrounding 9 pts => put salt excess in the ocean
-               zsi = psv_i(ji,jj,jl) / pv_i(ji,jj,jl)
-               IF( zsi > psi_max(ji,jj,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
-                  zfra = psi_max(ji,jj,jl) / zsi
-                  sfx_res(ji,jj) = sfx_res(ji,jj) + psv_i(ji,jj,jl) * ( 1._wp - zfra ) * rhoi * z1_dt
-                  psv_i(ji,jj,jl) = psv_i(ji,jj,jl) * zfra
-               ENDIF
-               !
-            ENDIF
          END_2D
       END DO
       !
       !                                           ! -- check e_i/v_i -- !
       DO jl = 1, jpl
          DO_3D( nn_hls, nn_hls, nn_hls, nn_hls, 1, nlay_i )
-            IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
-               ! if e_i/v_i is larger than the surrounding 9 pts => put the heat excess in the ocean
-               zei = pe_i(ji,jj,jk,jl) / pv_i(ji,jj,jl)
-               IF( zei > pei_max(ji,jj,jk,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
-                  zfra = pei_max(ji,jj,jk,jl) / zei
-                  hfx_res(ji,jj) = hfx_res(ji,jj) - pe_i(ji,jj,jk,jl) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
-                  pe_i(ji,jj,jk,jl) = pe_i(ji,jj,jk,jl) * zfra
-               ENDIF
-            ENDIF
+                  IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
+                     ! if e_i/v_i is larger than the surrounding 9 pts => put the heat excess in the ocean
+                     zei = pe_i(ji,jj,jk,jl) / pv_i(ji,jj,jl)
+                     IF( zei > pei_max(ji,jj,jk,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
+                        zfra = pei_max(ji,jj,jk,jl) / zei
+                        hfx_res(ji,jj) = hfx_res(ji,jj) - pe_i(ji,jj,jk,jl) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
+                        pe_i(ji,jj,jk,jl) = pe_i(ji,jj,jk,jl) * zfra
+                     ENDIF
+                  ENDIF
          END_3D
       END DO
       !                                           ! -- check e_s/v_s -- !
       DO jl = 1, jpl
          DO_3D( nn_hls, nn_hls, nn_hls, nn_hls, 1, nlay_s )
-            IF ( pv_s(ji,jj,jl) > 0._wp ) THEN
-               ! if e_s/v_s is larger than the surrounding 9 pts => put the heat excess in the ocean
-               zes = pe_s(ji,jj,jk,jl) / pv_s(ji,jj,jl)
-               IF( zes > pes_max(ji,jj,jk,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
-                  zfra = pes_max(ji,jj,jk,jl) / zes
-                  hfx_res(ji,jj) = hfx_res(ji,jj) - pe_s(ji,jj,jk,jl) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
-                  pe_s(ji,jj,jk,jl) = pe_s(ji,jj,jk,jl) * zfra
-               ENDIF
-            ENDIF
+                  IF ( pv_s(ji,jj,jl) > 0._wp ) THEN
+                     ! if e_s/v_s is larger than the surrounding 9 pts => put the heat excess in the ocean
+                     zes = pe_s(ji,jj,jk,jl) / pv_s(ji,jj,jl)
+                     IF( zes > pes_max(ji,jj,jk,jl) .AND. pa_i(ji,jj,jl) < 0.15 ) THEN
+                        zfra = pes_max(ji,jj,jk,jl) / zes
+                        hfx_res(ji,jj) = hfx_res(ji,jj) - pe_s(ji,jj,jk,jl) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
+                        pe_s(ji,jj,jk,jl) = pe_s(ji,jj,jk,jl) * zfra
+                     ENDIF
+                  ENDIF
          END_3D
       END DO
       !
@@ -894,21 +904,21 @@ CONTAINS
       ! -- check snow load -- !
       DO jl = 1, jpl
          DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
-            IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
-               !
-               zvs_excess = MAX( 0._wp, pv_s(ji,jj,jl) - pv_i(ji,jj,jl) * (rho0-rhoi) * r1_rhos )
-               !
-               IF( zvs_excess > 0._wp ) THEN   ! snow-ice interface deplets below the ocean surface
-                  ! put snow excess in the ocean
-                  zfra = ( pv_s(ji,jj,jl) - zvs_excess ) / MAX( pv_s(ji,jj,jl), epsi20 )
-                  wfx_res(ji,jj) = wfx_res(ji,jj) + zvs_excess * rhos * z1_dt
-                  hfx_res(ji,jj) = hfx_res(ji,jj) - SUM( pe_s(ji,jj,1:nlay_s,jl) ) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
-                  ! correct snow volume and heat content
-                  pe_s(ji,jj,1:nlay_s,jl) = pe_s(ji,jj,1:nlay_s,jl) * zfra
-                  pv_s(ji,jj,jl)          = pv_s(ji,jj,jl) - zvs_excess
+               IF ( pv_i(ji,jj,jl) > 0._wp ) THEN
+                  !
+                  zvs_excess = MAX( 0._wp, pv_s(ji,jj,jl) - pv_i(ji,jj,jl) * (rho0-rhoi) * r1_rhos )
+                  !
+                  IF( zvs_excess > 0._wp ) THEN   ! snow-ice interface deplets below the ocean surface
+                     ! put snow excess in the ocean
+                     zfra = ( pv_s(ji,jj,jl) - zvs_excess ) / MAX( pv_s(ji,jj,jl), epsi20 )
+                     wfx_res(ji,jj) = wfx_res(ji,jj) + zvs_excess * rhos * z1_dt
+                     hfx_res(ji,jj) = hfx_res(ji,jj) - SUM( pe_s(ji,jj,1:nlay_s,jl) ) * ( 1._wp - zfra ) * z1_dt ! W.m-2 <0
+                     ! correct snow volume and heat content
+                     pe_s(ji,jj,1:nlay_s,jl) = pe_s(ji,jj,1:nlay_s,jl) * zfra
+                     pv_s(ji,jj,jl)          = pv_s(ji,jj,jl) - zvs_excess
+                  ENDIF
+                  !
                ENDIF
-               !
-            ENDIF
          END_2D
       END DO
       !
@@ -1060,7 +1070,7 @@ CONTAINS
                   sxap = 0._wp ;   syap = 0._wp    ;   sxxap = 0._wp    ;   syyap = 0._wp    ;   sxyap = 0._wp   ! melt pond fraction
                   sxvp = 0._wp ;   syvp = 0._wp    ;   sxxvp = 0._wp    ;   syyvp = 0._wp    ;   sxyvp = 0._wp   ! melt pond volume
                ENDIF
-                  !
+               !
                IF ( ln_pnd_lids ) THEN                               ! melt pond lid volume
                   IF( iom_varid( numrir, 'sxvl', ldstop = .FALSE. ) > 0 ) THEN
                      CALL iom_get( numrir, jpdom_auto, 'sxvl' , sxvl , psgn = -1._wp )
@@ -1202,13 +1212,6 @@ CONTAINS
       INTEGER  ::   ji, jj, jl   ! dummy loop indices
       !!----------------------------------------------------------------------
       ! basic version: get the max of epsi20 + 9 neighbours
-!!$      DO jl = 1, jpl
-!!$         DO_2D( 0, 0, 0, 0 )
-!!$            pmax(ji,jj,jl) = MAX( epsi20, pice(ji-1,jj-1,jl), pice(ji,jj-1,jl), pice(ji+1,jj-1,jl),   &
-!!$               &                          pice(ji-1,jj  ,jl), pice(ji,jj  ,jl), pice(ji+1,jj  ,jl),   &
-!!$               &                          pice(ji-1,jj+1,jl), pice(ji,jj+1,jl), pice(ji+1,jj+1,jl) )
-!!$         END_2D
-!!$      END DO
       ! optimized version : does a little bit more than 2 max of epsi20 + 3 neighbours
       DO jl = 1, jpl
          DO ji = Nis0, Nie0
@@ -1216,10 +1219,10 @@ CONTAINS
             zmax2(ji) = MAX( epsi20, pice(ji,Njs0  ,jl), pice(ji-1,Njs0  ,jl), pice(ji+1,Njs0  ,jl) )
          END DO
          DO_2D( 0, 0, 0, 0 )
-            zmax3 = MAX( epsi20, pice(ji,jj+1,jl), pice(ji-1,jj+1,jl), pice(ji+1,jj+1,jl) )
-            pmax(ji,jj,jl) = MAX( epsi20, zmax1(ji), zmax2(ji), zmax3 )
-            zmax1(ji) = zmax2(ji)
-            zmax2(ji) = zmax3
+               zmax3 = MAX( epsi20, pice(ji,jj+1,jl), pice(ji-1,jj+1,jl), pice(ji+1,jj+1,jl) )
+               pmax(ji,jj,jl) = MAX( epsi20, zmax1(ji), zmax2(ji), zmax3 )
+               zmax1(ji) = zmax2(ji)
+               zmax2(ji) = zmax3
          END_2D
       END DO
    END SUBROUTINE icemax3D
@@ -1238,15 +1241,6 @@ CONTAINS
       !!----------------------------------------------------------------------
       jlay = SIZE( pice , 3 )   ! size of input arrays
       ! basic version: get the max of epsi20 + 9 neighbours
-!!$      DO jl = 1, jpl
-!!$         DO jk = 1, jlay
-!!$            DO_2D( 0, 0, 0, 0 )
-!!$               pmax(ji,jj,jk,jl) = MAX( epsi20, pice(ji-1,jj-1,jk,jl), pice(ji,jj-1,jk,jl), pice(ji+1,jj-1,jk,jl),   &
-!!$                  &                             pice(ji-1,jj  ,jk,jl), pice(ji,jj  ,jk,jl), pice(ji+1,jj  ,jk,jl),   &
-!!$                  &                             pice(ji-1,jj+1,jk,jl), pice(ji,jj+1,jk,jl), pice(ji+1,jj+1,jk,jl) )
-!!$            END_2D
-!!$         END DO
-!!$      END DO
       ! optimized version : does a little bit more than 2 max of epsi20 + 3 neighbours
       DO jl = 1, jpl
          DO jk = 1, jlay
@@ -1255,10 +1249,10 @@ CONTAINS
                zmax2(ji) = MAX( epsi20, pice(ji,Njs0  ,jk,jl), pice(ji-1,Njs0  ,jk,jl), pice(ji+1,Njs0  ,jk,jl) )
             END DO
             DO_2D( 0, 0, 0, 0 )
-               zmax3 = MAX( epsi20, pice(ji,jj+1,jk,jl), pice(ji-1,jj+1,jk,jl), pice(ji+1,jj+1,jk,jl) )
-               pmax(ji,jj,jk,jl) = MAX( epsi20, zmax1(ji), zmax2(ji), zmax3 )
-               zmax1(ji) = zmax2(ji)
-               zmax2(ji) = zmax3
+                  zmax3 = MAX( epsi20, pice(ji,jj+1,jk,jl), pice(ji-1,jj+1,jk,jl), pice(ji+1,jj+1,jk,jl) )
+                  pmax(ji,jj,jk,jl) = MAX( epsi20, zmax1(ji), zmax2(ji), zmax3 )
+                  zmax1(ji) = zmax2(ji)
+                  zmax2(ji) = zmax3
             END_2D
          END DO
       END DO

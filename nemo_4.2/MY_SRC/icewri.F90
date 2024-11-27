@@ -74,15 +74,15 @@ CONTAINS
 
       ! tresholds for outputs
       DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
-         zmsk00(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - epsi06  ) ) ! 1 if ice    , 0 if no ice
-         zmsk05(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - 0.05_wp ) ) ! 1 if 5% ice , 0 if less
-         zmsk15(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - 0.15_wp ) ) ! 1 if 15% ice, 0 if less
-         zmsksn(ji,jj) = MAX( 0._wp , SIGN( 1._wp , vt_s(ji,jj) - epsi06  ) ) ! 1 if snow   , 0 if no snow
+            zmsk00(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - epsi06  ) ) ! 1 if ice    , 0 if no ice
+            zmsk05(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - 0.05_wp ) ) ! 1 if 5% ice , 0 if less
+            zmsk15(ji,jj) = MAX( 0._wp , SIGN( 1._wp , at_i(ji,jj) - 0.15_wp ) ) ! 1 if 15% ice, 0 if less
+            zmsksn(ji,jj) = MAX( 0._wp , SIGN( 1._wp , vt_s(ji,jj) - epsi06  ) ) ! 1 if snow   , 0 if no snow
       END_2D
       DO jl = 1, jpl
          DO_2D( nn_hls, nn_hls, nn_hls, nn_hls )
-            zmsk00l(ji,jj,jl)  = MAX( 0._wp , SIGN( 1._wp , a_i(ji,jj,jl) - epsi06 ) )
-            zmsksnl(ji,jj,jl)  = MAX( 0._wp , SIGN( 1._wp , v_s(ji,jj,jl) - epsi06 ) )
+               zmsk00l(ji,jj,jl)  = MAX( 0._wp , SIGN( 1._wp , a_i(ji,jj,jl) - epsi06 ) )
+               zmsksnl(ji,jj,jl)  = MAX( 0._wp , SIGN( 1._wp , v_s(ji,jj,jl) - epsi06 ) )
          END_2D
       END DO
 
@@ -116,7 +116,7 @@ CONTAINS
       IF( iom_use('icefrb'  ) ) THEN                                                                                        ! Ice freeboard
          z2d(:,:) = ( zrho1 * hm_i(:,:) - zrho2 * hm_s(:,:) )
          WHERE( z2d < 0._wp )   z2d = 0._wp
-                                  CALL iom_put( 'icefrb' , z2d * zmsk00         )
+         CALL iom_put( 'icefrb' , z2d * zmsk00         )
       ENDIF
       ! melt ponds
       IF( iom_use('iceapnd' ) )   CALL iom_put( 'iceapnd', at_ip  * zmsk00      )                                           ! melt pond total fraction
@@ -147,15 +147,17 @@ CONTAINS
       IF( iom_use('icevel') .OR. iom_use('fasticepres') ) THEN                                                              ! module of ice velocity & fast ice
          ALLOCATE( zfast(jpi,jpj) )
          DO_2D( 0, 0, 0, 0 )
-            z2da  = u_ice(ji,jj) + u_ice(ji-1,jj)
-            z2db  = v_ice(ji,jj) + v_ice(ji,jj-1)
-            z2d(ji,jj) = 0.5_wp * SQRT( z2da * z2da + z2db * z2db )
+               z2da  = u_ice(ji,jj) + u_ice(ji-1,jj)
+               z2db  = v_ice(ji,jj) + v_ice(ji,jj-1)
+               z2d(ji,jj) = 0.5_wp * SQRT( z2da * z2da + z2db * z2db )
          END_2D
          CALL lbc_lnk( 'icewri', z2d, 'T', 1.0_wp )
          CALL iom_put( 'icevel', z2d )
 
-         WHERE( z2d(:,:) < 5.e-04_wp .AND. zmsk15(:,:) == 1._wp ) ; zfast(:,:) = 1._wp                                      ! record presence of fast ice
-         ELSEWHERE                                                ; zfast(:,:) = 0._wp
+         WHERE( z2d(:,:) < 5.e-04_wp .AND. zmsk15(:,:) == 1._wp )
+            zfast(:,:) = 1._wp                                      ! record presence of fast ice
+         ELSEWHERE
+            zfast(:,:) = 0._wp
          END WHERE
          CALL iom_put( 'fasticepres', zfast )
          DEALLOCATE( zfast )
@@ -164,9 +166,9 @@ CONTAINS
       IF( ln_rhg_BBM ) THEN
          IF( iom_use('icevelf') ) THEN                                                              ! module of ice velocity @ F points
             DO_2D( 0, 0, 0, 0 )
-               z2da  = uVice(ji+1,jj) + uVice(ji,jj)
-               z2db  = vUice(ji,jj+1) + vUice(ji,jj)
-               z2d(ji,jj) = 0.5_wp * SQRT( z2da * z2da + z2db * z2db )
+                  z2da  = uVice(ji+1,jj) + uVice(ji,jj)
+                  z2db  = vUice(ji,jj+1) + vUice(ji,jj)
+                  z2d(ji,jj) = 0.5_wp * SQRT( z2da * z2da + z2db * z2db )
             END_2D
             CALL lbc_lnk( 'icewri',  z2d, 'F', 1.0_wp )
             CALL iom_put( 'icevelf', z2d*xmsk_ice_f )
@@ -235,8 +237,10 @@ CONTAINS
       IF(  iom_use('NH_icearea') .OR. iom_use('NH_icevolu') .OR. iom_use('NH_iceextt') .OR. &
          & iom_use('SH_icearea') .OR. iom_use('SH_icevolu') .OR. iom_use('SH_iceextt') ) THEN
          !
-         WHERE( ff_t(:,:) > 0._wp )   ;   z2d(:,:) = 1._wp
-         ELSEWHERE                    ;   z2d(:,:) = 0.
+         WHERE( ff_t(:,:) > 0._wp )
+            z2d(:,:) = 1._wp
+         ELSEWHERE
+            z2d(:,:) = 0.
          END WHERE
          !
          IF( iom_use('NH_icearea') )   zdiag_area_nh = glob_sum( 'icewri', at_i *           z2d   * e1e2t * 1.e-12 )

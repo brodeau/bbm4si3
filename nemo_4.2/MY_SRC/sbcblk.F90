@@ -46,7 +46,6 @@ MODULE sbcblk
    USE sbc_ice        ! Surface boundary condition: ice fields #LB? ok to be in 'key_si3' ???
    USE ice     , ONLY :   u_ice, v_ice, jpl, a_i_b, at_i_b, t_su, rn_cnd_s, hfx_err_dif, nn_qtrice
    USE icevar         ! for CALL ice_var_snwblow
-   USE sbcblk_algo_ice_easy
    USE sbcblk_algo_ice_an05
    USE sbcblk_algo_ice_lu12
    USE sbcblk_algo_ice_lg15
@@ -108,7 +107,6 @@ MODULE sbcblk
    !
    !#LB:
    LOGICAL  ::   ln_Cx_ice_cst             ! use constant air-ice bulk transfer coefficients (value given in namelist's rn_Cd_i, rn_Ce_i & rn_Ch_i)
-   LOGICAL  ::   ln_Cx_ice_EASY            ! air-ice bulk transfer coefficients based on Andreas et al., 2005
    REAL(wp) ::   rn_Cd_i, rn_Ce_i, rn_Ch_i ! values for  "    "
    LOGICAL  ::   ln_Cx_ice_AN05            ! air-ice bulk transfer coefficients based on Andreas et al., 2005
    LOGICAL  ::   ln_Cx_ice_LU12            ! air-ice bulk transfer coefficients based on Lupkes et al., 2012
@@ -161,10 +159,9 @@ MODULE sbcblk
    INTEGER  ::   nblk_ice           ! choice of the bulk algorithm
    !                            ! associated indices:
    INTEGER, PARAMETER ::   np_ice_cst  = 1   ! constant transfer coefficients
-   INTEGER, PARAMETER ::   np_ice_easy = 2   ! constant NEUTRAL transfer coefficients / Brodeau 2023
-   INTEGER, PARAMETER ::   np_ice_an05 = 3   ! Andreas et al., 2005
-   INTEGER, PARAMETER ::   np_ice_lu12 = 4   ! Lupkes el al., 2012
-   INTEGER, PARAMETER ::   np_ice_lg15 = 5   ! Lupkes & Gryanik, 2015
+   INTEGER, PARAMETER ::   np_ice_an05 = 2   ! Andreas et al., 2005
+   INTEGER, PARAMETER ::   np_ice_lu12 = 3   ! Lupkes el al., 2012
+   INTEGER, PARAMETER ::   np_ice_lg15 = 4   ! Lupkes & Gryanik, 2015
 #endif
    !LB.
 
@@ -226,7 +223,7 @@ CONTAINS
          &                 rn_pfac, rn_efac,                                          &
          &                 ln_crt_fbk, rn_stau_a, rn_stau_b,                          &   ! current feedback
          &                 ln_humi_sph, ln_humi_dpt, ln_humi_rlh, ln_tair_pot,        &
-         &                 ln_Cx_ice_cst, ln_Cx_ice_EASY, rn_Cd_i, rn_Ce_i, rn_Ch_i,  &
+         &                 ln_Cx_ice_cst, rn_Cd_i, rn_Ce_i, rn_Ch_i,                  &
          &                 ln_Cx_ice_AN05, ln_Cx_ice_LU12, ln_Cx_ice_LG15,            &
          &                 cn_dir,                                                    &
          &                 sn_wndi, sn_wndj, sn_qsr, sn_qlw ,                         &   ! input fields
@@ -316,9 +313,6 @@ CONTAINS
       ioptio = 0
       IF( ln_Cx_ice_cst ) THEN
          nblk_ice =  np_ice_cst     ;   ioptio = ioptio + 1
-      ENDIF
-      IF( ln_Cx_ice_EASY ) THEN
-         nblk_ice =  np_ice_easy   ;   ioptio = ioptio + 1
       ENDIF
       IF( ln_Cx_ice_AN05 ) THEN
          nblk_ice =  np_ice_an05   ;   ioptio = ioptio + 1
@@ -453,7 +447,6 @@ CONTAINS
          IF( nn_ice > 0 ) THEN
             WRITE(numout,*)
             WRITE(numout,*) '      use constant ice-atm bulk transfer coeff.           ln_Cx_ice_cst  = ', ln_Cx_ice_cst
-            WRITE(numout,*) '      use ice-atm bulk coeff. Neutral+Stab / Brodeau      ln_Cx_ice_EASY = ', ln_Cx_ice_EASY
             WRITE(numout,*) '      use ice-atm bulk coeff. from Andreas et al., 2005   ln_Cx_ice_AN05 = ', ln_Cx_ice_AN05
             WRITE(numout,*) '      use ice-atm bulk coeff. from Lupkes et al., 2012    ln_Cx_ice_LU12 = ', ln_Cx_ice_LU12
             WRITE(numout,*) '      use ice-atm bulk coeff. from Lupkes & Gryanik, 2015 ln_Cx_ice_LG15 = ', ln_Cx_ice_LG15
@@ -465,11 +458,6 @@ CONTAINS
             WRITE(numout,*) '      => Cd_ice, Ce_ice, Ch_ice =', REAL(rn_Cd_i,4), REAL(rn_Ce_i,4), REAL(rn_Ch_i,4)
             IF( (rn_Cd_i<0._wp).OR.(rn_Cd_i>1.E-2_wp).OR.(rn_Ce_i<0._wp).OR.(rn_Ce_i>1.E-2_wp).OR.(rn_Ch_i<0._wp).OR.(rn_Ch_i>1.E-2_wp) ) &
                & CALL ctl_stop( 'Be realistic in your pick of Cd_ice, Ce_ice & Ch_ice ! (0 < Cx < 1.E-2)')
-         CASE( np_ice_easy  )
-            WRITE(numout,*) '   ==>>>   Constant NEUTRAL bulk transfer coefficients over sea-ice (Brodeau 2023)'
-            WRITE(numout,*) '      => Cd_N_ice, Ce_N_ice, Ch_N_ice =', REAL(rn_Cd_i,4), REAL(rn_Ce_i,4), REAL(rn_Ch_i,4)
-            IF( (rn_Cd_i<0._wp).OR.(rn_Cd_i>1.E-2_wp).OR.(rn_Ce_i<0._wp).OR.(rn_Ce_i>1.E-2_wp).OR.(rn_Ch_i<0._wp).OR.(rn_Ch_i>1.E-2_wp) ) &
-               & CALL ctl_stop( 'Be realistic in your pick of Cd_N_ice, Ce_N_ice & Ch_N_ice ! (0 < Cx < 1.E-2)')
          CASE( np_ice_an05 )   ;   WRITE(numout,*) '   ==>>> bulk algo over ice: Andreas et al, 2005'
          CASE( np_ice_lu12 )   ;   WRITE(numout,*) '   ==>>> bulk algo over ice: Lupkes et al, 2012'
          CASE( np_ice_lg15 )   ;   WRITE(numout,*) '   ==>>> bulk algo over ice: Lupkes & Gryanik, 2015'
@@ -575,7 +563,7 @@ CONTAINS
          ELSE
             ! temperature read into file is ABSOLUTE temperature (that's the case for ECMWF products for example...)
             IF((kt==nit000).AND.lwp) WRITE(numout,*) ' *** sbc_blk() => air temperature converted from ABSOLUTE to POTENTIAL!'
-            zpre(:,:)         = pres_temp( q_air_zt(:,:), sf(jp_slp)%fnow(:,:,1), rn_zqt, pta=sf(jp_tair)%fnow(:,:,1) ) !LOLO: GS bug rn_zu => rn_zqt
+            zpre(:,:)         = pres_temp( q_air_zt(:,:), sf(jp_slp)%fnow(:,:,1), rn_zqt, pta=sf(jp_tair)%fnow(:,:,1) ) !LOLO: GS bug rn_zu => rn_zqt !#bbm !#BUG
             theta_air_zt(:,:) = theta_exner( sf(jp_tair)%fnow(:,:,1), zpre(:,:) )
          ENDIF
          !
@@ -1002,7 +990,7 @@ CONTAINS
    !!----------------------------------------------------------------------
 
    SUBROUTINE blk_ice_1( pwndi, pwndj, ptair, pqair, pslp , puice, pvice, ptsui,  &   ! inputs
-      &                  putaui, pvtaui, pseni, pevpi, pssqi, pcd_dui, putaui_v, pvtaui_u )   ! optional outputs
+      &                  putaui, pvtaui, pseni, pevpi, pssqi, pcd_dui, putaui_v, pvtaui_u )   ! optional outputs !#bbm
       !!---------------------------------------------------------------------
       !!                     ***  ROUTINE blk_ice_1  ***
       !!
@@ -1026,18 +1014,18 @@ CONTAINS
       REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   pevpi   ! if ln_abl
       REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   pssqi   ! if ln_abl
       REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   pcd_dui ! if ln_abl
-      REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   putaui_v  ! # BBM
-      REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   pvtaui_u  ! #BBM
+      REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   putaui_v  !#bbm
+      REAL(wp) , INTENT(  out), DIMENSION(:,:  ), OPTIONAL ::   pvtaui_u  !#bbm
 
       !
       INTEGER  ::   ji, jj    ! dummy loop indices
       REAL(wp) ::   zootm_su                      ! sea-ice surface mean temperature
       REAL(wp) ::   zztmp1, zztmp2                ! temporary scalars
-      REAL(wp), DIMENSION(jpi,jpj) :: ztmpr, zsipt ! temporary array
-      LOGICAL  :: lbbm
+      REAL(wp), DIMENSION(jpi,jpj) :: ztmp, zsipt ! temporary array
+      LOGICAL  :: lbbm !#bbm
       !!---------------------------------------------------------------------
       !
-      lbbm = ( PRESENT(putaui_v) .AND. PRESENT(pvtaui_u) )
+      lbbm = ( PRESENT(putaui_v) .AND. PRESENT(pvtaui_u) ) !#bbm
       ! ------------------------------------------------------------ !
       !    Wind module relative to the moving ice ( U10m - U_ice )   !
       ! ------------------------------------------------------------ !
@@ -1047,9 +1035,9 @@ CONTAINS
       END_2D
       !
       ! potential sea-ice surface temperature [K]
-      zsipt(:,:) = theta_exner( ptsui(:,:), pslp(:,:) )
+      !zsipt(:,:) = theta_exner( ptsui(:,:), pslp(:,:) )  !#bbm #BUG it sould remain `ptsui` !
 
-      IF( nblk_ice>1 ) ztmpr(:,:) = q_sat( ptsui(:,:), pslp(:,:), l_ice=.TRUE. ) ! temporary array for SSQ over ice
+      IF( nblk_ice>1 ) ztmp(:,:) = q_sat( ptsui(:,:), pslp(:,:), l_ice=.TRUE. ) ! temporary array for SSQ over ice ! #bbm OPTIMIZATION!
 
       ! sea-ice <-> atmosphere bulk transfer coefficients
       SELECT CASE( nblk_ice )
@@ -1063,27 +1051,20 @@ CONTAINS
          theta_zu_i(:,:) = ptair(:,:)
          q_zu_i(:,:)     = pqair(:,:)
 
-      CASE( np_ice_easy )  ! calculate new drag from constant neutral Cx + stability (Brodeau 2023)
-         CALL turb_ice_easy( rn_zqt, rn_zu, ptsui, ptair, ztmpr, pqair, wndm_ice,       &
-            &                      rn_Cd_i, rn_Ch_i, rn_Ce_i,                           &
-            &                      Cd_ice, Ch_ice, Ce_ice, theta_zu_i, q_zu_i )
-         !!
       CASE( np_ice_an05 )  ! calculate new drag from Lupkes(2015) equations
-         CALL turb_ice_an05( rn_zqt, rn_zu, ptsui, ptair, ztmpr, pqair, wndm_ice,       &
+         CALL turb_ice_an05( rn_zqt, rn_zu, ptsui, ptair, ztmp, pqair, wndm_ice,       & !#bbm #BUG it sould remain `ptsui` !
             &                      Cd_ice, Ch_ice, Ce_ice, theta_zu_i, q_zu_i )
          !!
       CASE( np_ice_lu12 )
-         CALL turb_ice_lu12( rn_zqt, rn_zu, ptsui, ptair, ztmpr, pqair, wndm_ice, fr_i, &
+         CALL turb_ice_lu12( rn_zqt, rn_zu, ptsui, ptair, ztmp, pqair, wndm_ice, fr_i, & !#bbm #BUG it sould remain `ptsui` !
             &                      Cd_ice, Ch_ice, Ce_ice, theta_zu_i, q_zu_i )
          !!
       CASE( np_ice_lg15 )  ! calculate new drag from Lupkes(2015) equations
-         CALL turb_ice_lg15( rn_zqt, rn_zu, ptsui, ptair, ztmpr, pqair, wndm_ice, fr_i, &
+         CALL turb_ice_lg15( rn_zqt, rn_zu, ptsui, ptair, ztmp, pqair, wndm_ice, fr_i, & !#bbm #BUG it sould remain `ptsui` !
             &                      Cd_ice, Ch_ice, Ce_ice, theta_zu_i, q_zu_i )
          !!
       END SELECT
 
-      !IF( iom_use('Cd_ice').OR.iom_use('Ce_ice').OR.iom_use('Ch_ice').OR.iom_use('taum_ice').OR.iom_use('utau_ice').OR.iom_use('vtau_ice') ) &
-      !   & ztmpr(:,:) = 1000.*( 1._wp - MAX(0._wp, SIGN( 1._wp, 1.E-6_wp - fr_i )) )*tmask(:,:,1) ! mask for presence of ice !
       IF( iom_use('Cd_ice') ) CALL iom_put("Cd_ice", Cd_ice*1000._wp*tmask(:,:,1))
       IF( iom_use('Ce_ice') ) CALL iom_put("Ce_ice", Ce_ice*1000._wp*tmask(:,:,1))
       IF( iom_use('Ch_ice') ) CALL iom_put("Ch_ice", Ch_ice*1000._wp*tmask(:,:,1))
@@ -1106,31 +1087,31 @@ CONTAINS
          IF(iom_use('utau_ice')) CALL iom_put("utau_ice", putaui)  ! utau at T-points!
          IF(iom_use('vtau_ice')) CALL iom_put("vtau_ice", pvtaui)  ! vtau at T-points!
 
-         !! Use `ztmpr` and `zsipt` as temporary arrays for interp from T-points to U,V-points:
+         !#bbm:
+         !! Use `ztmp` and `zsipt` as temporary arrays for interp from T-points to U,V-points:
          !!  (otherwize, the following will be done twice if BBM rheology is used...)
          DO_2D( 0, 0, 0, 0 )    ! U & V-points (same as ocean).
-            ztmpr(ji,jj) = 0.5_wp * ( 2. - umask(ji,jj,1) ) * MAX( tmask(ji,jj,1),tmask(ji+1,jj  ,1) )
+            ztmp (ji,jj) = 0.5_wp * ( 2. - umask(ji,jj,1) ) * MAX( tmask(ji,jj,1),tmask(ji+1,jj  ,1) )
             zsipt(ji,jj) = 0.5_wp * ( 2. - vmask(ji,jj,1) ) * MAX( tmask(ji,jj,1),tmask(ji  ,jj+1,1) )
          END_2D
-
-         !#bbm:
+         !!
          IF( lbbm ) THEN
-            !lili
             !! Interpolation of Taux@T,Tauy@T => Taux@V,Tauy@U (F-centered cell, BBM)
             DO_2D( 0, 0, 0, 0 )    ! U & V-points (same as ocean).
-               pvtaui_u(ji,jj) = ztmpr(ji,jj) * ( pvtaui(ji,jj) + pvtaui(ji+1,jj  ) )
+               pvtaui_u(ji,jj) = ztmp (ji,jj) * ( pvtaui(ji,jj) + pvtaui(ji+1,jj  ) )
                putaui_v(ji,jj) = zsipt(ji,jj) * ( putaui(ji,jj) + putaui(ji  ,jj+1) )
             END_2D
             CALL lbc_lnk( 'sbcblk', putaui_v, 'V', -1._wp, pvtaui_u, 'U', -1._wp )
          END IF
-         !#bbm.
          !
          DO_2D( 0, 0, 0, 0 )    ! U & V-points (same as ocean).
-            !! Interpolation of Taux@T,Tauy@T => Taux@U,Tauy@V
+            !#LB: QUESTION?? so SI3 expects wind stress vector to be provided at U & V points? Not at T-points ?
             ! take care of the land-sea mask to avoid "pollution" of coastal stress. p[uv]taui used in frazil and  rheology
-            putaui(ji,jj) = ztmpr(ji,jj) * ( putaui(ji,jj) + putaui(ji+1,jj  ) )
+            putaui(ji,jj) = ztmp (ji,jj) * ( putaui(ji,jj) + putaui(ji+1,jj  ) )
             pvtaui(ji,jj) = zsipt(ji,jj) * ( pvtaui(ji,jj) + pvtaui(ji  ,jj+1) )
          END_2D
+         !#bbm.
+         !
          CALL lbc_lnk( 'sbcblk', putaui, 'U', -1._wp, pvtaui, 'V', -1._wp )
          !
          IF(sn_cfctl%l_prtctl)  CALL prt_ctl( tab2d_1=CASTDP(putaui), clinfo1=' blk_ice: putaui : ', mask1=umask   &

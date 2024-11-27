@@ -133,8 +133,7 @@ CONTAINS
       NAMELIST/namdyn_rhg/  ln_rhg_EVP, ln_aEVP, ln_rhg_EAP, rn_creepl, rn_ecc , nn_nevp, rn_relast, nn_rhg_chkcvg, &  !-- evp
          &                  ln_rhg_BBM, ln_idealized, rn_Nref, rn_E0, rn_eta0, rn_P0, rn_kth, nn_nbbm, nn_d_adv,    &  !-- bbm
          &                  rn_crndg, ln_boost_CN_coast, rn_max_CN_coast, ln_boost_CN_high_dmg, rn_max_CN_dmg,      &  !-- bbm
-         &                  rn_dmg_max, rn_C0, rn_alrlx, rn_btrlx, rn_c_ref, rn_l_ref, ln_damaged_E,                &  !-- bbm
-         &                  ln_tame_ini_ws, rn_half_tame,                                                           &  !-- bbm
+         &                  rn_dmg_max, rn_C0, rn_alrlx, rn_btrlx, rn_c_ref, rn_l_ref, ln_tame_ini_ws, rn_half_tame,&  !-- bbm
          &                  ln_rhg_VP, nn_vp_nout, nn_vp_ninn, nn_vp_chkcvg                                            !-- vp
       !!-------------------------------------------------------------------
       !
@@ -195,7 +194,6 @@ CONTAINS
             WRITE(numout,*) '         `alpha`-like of Olason/Boutin in `lamdda`         rn_btrlx      = ', rn_btrlx !#bbm
             WRITE(numout,*) '         ice cohesion value at the lab scale               rn_c_ref      = ', rn_c_ref !#bbm
             WRITE(numout,*) '         scaling parameter for cohesion                    rn_l_ref      = ', rn_l_ref  !#bbm
-            WRITE(numout,*) '         use damaged elasticity in MC test                 ln_damaged_E  = ', ln_damaged_E !#bbm
             WRITE(numout,*) '         gently increase wind stress from 0 if cold start  ln_tame_ini_ws= ', ln_tame_ini_ws !#bbm
             IF( ln_tame_ini_ws ) &
                & WRITE(numout,*) '         => delay (h) at which half of increase done       rn_half_tame  = ', rn_half_tame !#bbm

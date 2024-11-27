@@ -193,7 +193,6 @@ MODULE ice
    REAL(wp), PUBLIC ::   rn_btrlx         !: `beta`: sort of an `alpha` to go in the exp[] of `lambda`, used by Olason   Boutin      =   5.
    REAL(wp), PUBLIC ::   rn_c_ref         !: Cohesion value at the lab scale                                                         = 2.E6
    REAL(wp), PUBLIC ::   rn_l_ref         !: scaling paramater for cohesion, `l_ref` in [Eq.30 of Olason et al.,2022]
-   LOGICAL,  PUBLIC ::   ln_damaged_E     !: Use damaged elasticity in MC test (propagation speed of elastic waves)
    LOGICAL,  PUBLIC ::   ln_tame_ini_ws   !: Gently increase the wind stress from zero to expected value when cold-starting an experiment
    REAL(wp), PUBLIC ::   rn_half_tame     !: delay, in hours, at which half of the above taming is completed
    !
@@ -387,7 +386,7 @@ MODULE ice
    !! Variables summed over all categories, or associated to all the ice in a single grid cell
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   u_ice, v_ice  !: components of the ice velocity                          (m/s)
    !#bbm:
-   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   xmskt, xmskf  !: ! effective land-sea masks at T- and F-poins
+   REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   xmskt, xmskf, xms0f  !: effective land-sea masks at T- and F-poins
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   xmsk_ice_t, xmsk_ice_f !: mask for presence of ice
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   uVice, vUice  !: components of the ice velocity in F-centric formalism   (m/s)
    REAL(wp), PUBLIC, ALLOCATABLE, SAVE, DIMENSION(:,:)     ::   utauVice, vtauUice !: atmos-ice stress. comp. in F-centric formalism     (N/m2)
@@ -595,7 +594,7 @@ CONTAINS
       ! * damage tracers, and components of internal stress tensor at both T- and F-points:
       IF( ln_damage ) THEN
          ii = ii + 1
-         ALLOCATE(  xmskt(jpi,jpj) , xmskf(jpi,jpj) ,   &
+         ALLOCATE( xmskt(jpi,jpj) , xmskf(jpi,jpj) , xms0f(jpi,jpj) ,   &
             &      xmsk_ice_t(jpi,jpj) , xmsk_ice_f(jpi,jpj) ,   &
             &        dmgt(jpi,jpj) ,  dmgf(jpi,jpj) ,   &
             &      sgm11t(jpi,jpj) , sgm22t(jpi,jpj) , sgm12t(jpi,jpj) , &

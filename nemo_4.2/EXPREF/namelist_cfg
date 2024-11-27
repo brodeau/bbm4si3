@@ -157,7 +157,6 @@
    !! Bulk transfer coefficients over sea-ice: (relevant IF: nn_ice >=1 )
    !! LOLO: GUIBOU:  1.6 x 10-3 !!!
    ln_Cx_ice_cst = .true.     ! use constant ice-air bulk transfer coefficients (value given below)
-   ln_Cx_ice_EASY = .false.   !  Constant neutral coefficients (as above) BUT with stability dependancy!!! (Brodeau 2023)
       rn_Cd_i  = 1.65e-3      ! sea-ice drag coefficient
       rn_Ce_i  = 1.4e-3       !    "    sublimation coefficient
       rn_Ch_i  = 1.4e-3       !    "    sensible heat flux coefficient

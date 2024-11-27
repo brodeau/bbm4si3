@@ -104,33 +104,33 @@ CONTAINS
       rmpT2F(:,:) = 0._wp
       !!
       DO_2D( 1,0, 1,0 )
-      !!
-      i1 = ji   ; j1 = jj
-      i2 = ji+1 ; j2 = jj
-      i3 = ji   ; j3 = jj+1
-      i4 = ji+1 ; j4 = jj+1
-      !!
-      zt1 = pxt(i1,j1)*xmskt(i1,j1)
-      zt2 = pxt(i2,j2)*xmskt(i2,j2)
-      zt3 = pxt(i3,j3)*xmskt(i3,j3)
-      zt4 = pxt(i4,j4)*xmskt(i4,j4)
-      zfc = xmskf(ji,jj)
-      IF( lcnsrv ) THEN
-         zt1 = zt1 * e1e2t(i1,j1)
-         zt2 = zt2 * e1e2t(i2,j2)
-         zt3 = zt3 * e1e2t(i3,j3)
-         zt4 = zt4 * e1e2t(i4,j4)
-         zfc = zfc * r1_e1e2f(ji,jj)
-      END IF
-      !!
-      zm = xmskt(i1,j1) + xmskt(i2,j2) + xmskt(i3,j3) + xmskt(i4,j4)
-      zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
-      zfc = zfc * zz
-      !!
-      zs  = MAX( zm , 1.E-12_wp )
-      !!
-      rmpT2F(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
-      !!
+            !!
+            i1 = ji   ; j1 = jj
+            i2 = ji+1 ; j2 = jj
+            i3 = ji   ; j3 = jj+1
+            i4 = ji+1 ; j4 = jj+1
+            !!
+            zt1 = pxt(i1,j1)*xmskt(i1,j1)
+            zt2 = pxt(i2,j2)*xmskt(i2,j2)
+            zt3 = pxt(i3,j3)*xmskt(i3,j3)
+            zt4 = pxt(i4,j4)*xmskt(i4,j4)
+            zfc = xmskf(ji,jj)
+            IF( lcnsrv ) THEN
+               zt1 = zt1 * e1e2t(i1,j1)
+               zt2 = zt2 * e1e2t(i2,j2)
+               zt3 = zt3 * e1e2t(i3,j3)
+               zt4 = zt4 * e1e2t(i4,j4)
+               zfc = zfc * r1_e1e2f(ji,jj)
+            END IF
+            !!
+            zm = xmskt(i1,j1) + xmskt(i2,j2) + xmskt(i3,j3) + xmskt(i4,j4)
+            zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
+            zfc = zfc * zz
+            !!
+            zs  = MAX( zm , 1.E-12_wp )
+            !!
+            rmpT2F(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
+            !!
       END_2D
       !!
       IF(PRESENT(lbcl)) THEN
@@ -154,32 +154,32 @@ CONTAINS
       rmpF2T(:,:) = 0._wp
       !!
       DO_2D( 0,1, 0,1 )
-      !!
-      i1 = ji   ; j1 = jj
-      i2 = ji-1 ; j2 = jj
-      i3 = ji-1 ; j3 = jj-1
-      i4 = ji   ; j4 = jj-1
-      !!
-      zf1 = pxf(i1,j1)*xmskf(i1,j1)
-      zf2 = pxf(i2,j2)*xmskf(i2,j2)
-      zf3 = pxf(i3,j3)*xmskf(i3,j3)
-      zf4 = pxf(i4,j4)*xmskf(i4,j4)
-      zfc = xmskt(ji,jj)
-      IF( lcnsrv ) THEN
-         zf1 = zf1 * e1e2f(i1,j1)
-         zf2 = zf2 * e1e2f(i2,j2)
-         zf3 = zf3 * e1e2f(i3,j3)
-         zf4 = zf4 * e1e2f(i4,j4)
-         zfc = zfc * r1_e1e2t(ji,jj)
-      END IF
-      !!
-      zm = xmskf(i1,j1) + xmskf(i2,j2) + xmskf(i3,j3) + xmskf(i4,j4)
-      zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet F-point, `0` otherwize
-      zfc = zfc * zz
-      !
-      zs = MAX( zm , 1.E-12_wp )
-      !!
-      rmpF2T(ji,jj) = ( zf1 + zf2 + zf3 + zf4 ) * zfc / zs
+            !!
+            i1 = ji   ; j1 = jj
+            i2 = ji-1 ; j2 = jj
+            i3 = ji-1 ; j3 = jj-1
+            i4 = ji   ; j4 = jj-1
+            !!
+            zf1 = pxf(i1,j1)*xmskf(i1,j1)
+            zf2 = pxf(i2,j2)*xmskf(i2,j2)
+            zf3 = pxf(i3,j3)*xmskf(i3,j3)
+            zf4 = pxf(i4,j4)*xmskf(i4,j4)
+            zfc = xmskt(ji,jj)
+            IF( lcnsrv ) THEN
+               zf1 = zf1 * e1e2f(i1,j1)
+               zf2 = zf2 * e1e2f(i2,j2)
+               zf3 = zf3 * e1e2f(i3,j3)
+               zf4 = zf4 * e1e2f(i4,j4)
+               zfc = zfc * r1_e1e2t(ji,jj)
+            END IF
+            !!
+            zm = xmskf(i1,j1) + xmskf(i2,j2) + xmskf(i3,j3) + xmskf(i4,j4)
+            zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet F-point, `0` otherwize
+            zfc = zfc * zz
+            !
+            zs = MAX( zm , 1.E-12_wp )
+            !!
+            rmpF2T(ji,jj) = ( zf1 + zf2 + zf3 + zf4 ) * zfc / zs
       END_2D
       !!
       IF(PRESENT(lbcl)) THEN
@@ -203,33 +203,33 @@ CONTAINS
       rmpU2V(:,:) = 0._wp
       !!
       DO_2D( 0,1, 1,0 )
-      !!
-      i1 = ji   ; j1 = jj
-      i2 = ji   ; j2 = jj+1
-      i3 = ji-1 ; j3 = jj+1
-      i4 = ji-1 ; j4 = jj
-      !!
-      zt1 = pxu(i1,j1)*umask(i1,j1,1)
-      zt2 = pxu(i2,j2)*umask(i2,j2,1)
-      zt3 = pxu(i3,j3)*umask(i3,j3,1)
-      zt4 = pxu(i4,j4)*umask(i4,j4,1)
-      zfc = 1._wp
-      IF( lcnsrv ) THEN
-         zt1 = zt1 * e1e2u(i1,j1)
-         zt2 = zt2 * e1e2u(i2,j2)
-         zt3 = zt3 * e1e2u(i3,j3)
-         zt4 = zt4 * e1e2u(i4,j4)
-         zfc = zfc * r1_e1e2v(ji,jj)
-      END IF
-      !!
-      zm = umask(i1,j1,1) + umask(i2,j2,1) + umask(i3,j3,1) + umask(i4,j4,1)
-      zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
-      zfc = zfc * zz
-      !!
-      zs  = MAX( zm , 1.E-12_wp )
-      !!
-      rmpU2V(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
-      !!
+            !!
+            i1 = ji   ; j1 = jj
+            i2 = ji   ; j2 = jj+1
+            i3 = ji-1 ; j3 = jj+1
+            i4 = ji-1 ; j4 = jj
+            !!
+            zt1 = pxu(i1,j1)*umask(i1,j1,1)
+            zt2 = pxu(i2,j2)*umask(i2,j2,1)
+            zt3 = pxu(i3,j3)*umask(i3,j3,1)
+            zt4 = pxu(i4,j4)*umask(i4,j4,1)
+            zfc = 1._wp
+            IF( lcnsrv ) THEN
+               zt1 = zt1 * e1e2u(i1,j1)
+               zt2 = zt2 * e1e2u(i2,j2)
+               zt3 = zt3 * e1e2u(i3,j3)
+               zt4 = zt4 * e1e2u(i4,j4)
+               zfc = zfc * r1_e1e2v(ji,jj)
+            END IF
+            !!
+            zm = umask(i1,j1,1) + umask(i2,j2,1) + umask(i3,j3,1) + umask(i4,j4,1)
+            zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
+            zfc = zfc * zz
+            !!
+            zs  = MAX( zm , 1.E-12_wp )
+            !!
+            rmpU2V(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
+            !!
       END_2D
       !!
       IF(PRESENT(lbcl)) THEN
@@ -253,33 +253,33 @@ CONTAINS
       rmpV2U(:,:) = 0._wp
       !!
       DO_2D( 1,0, 0,1 )
-      !!
-      i1 = ji+1 ; j1 = jj-1
-      i2 = ji+1 ; j2 = jj
-      i3 = ji   ; j3 = jj
-      i4 = ji   ; j4 = jj-1
-      !!
-      zt1 = pxv(i1,j1)*vmask(i1,j1,1)
-      zt2 = pxv(i2,j2)*vmask(i2,j2,1)
-      zt3 = pxv(i3,j3)*vmask(i3,j3,1)
-      zt4 = pxv(i4,j4)*vmask(i4,j4,1)
-      zfc = 1._wp
-      IF( lcnsrv ) THEN
-         zt1 = zt1 * e1e2v(i1,j1)
-         zt2 = zt2 * e1e2v(i2,j2)
-         zt3 = zt3 * e1e2v(i3,j3)
-         zt4 = zt4 * e1e2v(i4,j4)
-         zfc = zfc * r1_e1e2u(ji,jj)
-      END IF
-      !!
-      zm = vmask(i1,j1,1) + vmask(i2,j2,1) + vmask(i3,j3,1) + vmask(i4,j4,1)
-      zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
-      zfc = zfc * zz
-      !!
-      zs  = MAX( zm , 1.E-12_wp )
-      !!
-      rmpV2U(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
-      !!
+            !!
+            i1 = ji+1 ; j1 = jj-1
+            i2 = ji+1 ; j2 = jj
+            i3 = ji   ; j3 = jj
+            i4 = ji   ; j4 = jj-1
+            !!
+            zt1 = pxv(i1,j1)*vmask(i1,j1,1)
+            zt2 = pxv(i2,j2)*vmask(i2,j2,1)
+            zt3 = pxv(i3,j3)*vmask(i3,j3,1)
+            zt4 = pxv(i4,j4)*vmask(i4,j4,1)
+            zfc = 1._wp
+            IF( lcnsrv ) THEN
+               zt1 = zt1 * e1e2v(i1,j1)
+               zt2 = zt2 * e1e2v(i2,j2)
+               zt3 = zt3 * e1e2v(i3,j3)
+               zt4 = zt4 * e1e2v(i4,j4)
+               zfc = zfc * r1_e1e2u(ji,jj)
+            END IF
+            !!
+            zm = vmask(i1,j1,1) + vmask(i2,j2,1) + vmask(i3,j3,1) + vmask(i4,j4,1)
+            zz = MIN( zm , 1._wp ) ! => `1` if at least a surrounding wet T-point, `0` otherwize
+            zfc = zfc * zz
+            !!
+            zs  = MAX( zm , 1.E-12_wp )
+            !!
+            rmpV2U(ji,jj) = ( zt1 + zt2 + zt3 + zt4 ) * zfc / zs
+            !!
       END_2D
       !!
       IF(PRESENT(lbcl)) THEN
@@ -570,40 +570,40 @@ CONTAINS
 
       DO_2D( k1, k2, k1, k2 )
 
-      zmask = pmask(ji,jj)        ! actual mask containing right values for shear boundary conditions
+            zmask = pmask(ji,jj)        ! actual mask containing right values for shear boundary conditions
 
-      z1_e1e2 = p1_e1e2(ji,jj) * MIN(zmask, 1._wp)
+            z1_e1e2 = p1_e1e2(ji,jj) * MIN(zmask, 1._wp)
 
-      ze1e1 = pe1e1(ji,jj)
-      ze2e2 = pe2e2(ji,jj)
+            ze1e1 = pe1e1(ji,jj)
+            ze2e2 = pe2e2(ji,jj)
 
-      !! Divergence at cgt-points, `dU/dx + dV/dy` :
-      zE1 = (   pe2X(ji+ip,jj)*pU(ji+ip,jj) - pe2X(ji+im,jj)*pU(ji+im,jj) &
-         &    + pe1Y(ji,jj+jp)*pV(ji,jj+jp) - pe1Y(ji,jj+jm)*pV(ji,jj+jm) &
-         &  ) * z1_e1e2
-      IF( l_rtrn_div ) pdiv(ji,jj)  = zE1
+            !! Divergence at cgt-points, `dU/dx + dV/dy` :
+            zE1 = (   pe2X(ji+ip,jj)*pU(ji+ip,jj) - pe2X(ji+im,jj)*pU(ji+im,jj) &
+               &    + pe1Y(ji,jj+jp)*pV(ji,jj+jp) - pe1Y(ji,jj+jm)*pV(ji,jj+jm) &
+               &  ) * z1_e1e2
+            IF( l_rtrn_div ) pdiv(ji,jj)  = zE1
 
-      !! Tension at cgt-points, `dU/dx - dV/dy` :
-      zE2 = (  ( pU(ji+ip,jj)*p1_e2X(ji+ip,jj) - pU(ji+im,jj)*p1_e2X(ji+im,jj) ) * ze2e2 &
-         &    -( pV(ji,jj+jp)*p1_e1Y(ji,jj+jp) - pV(ji,jj+jm)*p1_e1Y(ji,jj+jm) ) * ze1e1 &
-         &  ) * z1_e1e2
+            !! Tension at cgt-points, `dU/dx - dV/dy` :
+            zE2 = (  ( pU(ji+ip,jj)*p1_e2X(ji+ip,jj) - pU(ji+im,jj)*p1_e2X(ji+im,jj) ) * ze2e2 &
+               &    -( pV(ji,jj+jp)*p1_e1Y(ji,jj+jp) - pV(ji,jj+jm)*p1_e1Y(ji,jj+jm) ) * ze1e1 &
+               &  ) * z1_e1e2
 
-      pdudx(ji,jj) = 0.5_wp * ( zE1 + zE2 )
-      pdvdy(ji,jj) = 0.5_wp * ( zE1 - zE2 )
+            pdudx(ji,jj) = 0.5_wp * ( zE1 + zE2 )
+            pdvdy(ji,jj) = 0.5_wp * ( zE1 - zE2 )
 
-      !! 2 * shear at cgt-points, `dU/dy + dV/dx` :
-      zzf = z1_e1e2 * zmask
-      zS1 = ( pUd(ji,jj+jp)*p1_e1Y(ji,jj+jp) - pUd(ji,jj+jm)*p1_e1Y(ji,jj+jm) ) * ze1e1 * zzf
-      zS2 = ( pVd(ji+ip,jj)*p1_e2X(ji+ip,jj) - pVd(ji+im,jj)*p1_e2X(ji+im,jj) ) * ze2e2 * zzf
+            !! 2 * shear at cgt-points, `dU/dy + dV/dx` :
+            zzf = z1_e1e2 * zmask
+            zS1 = ( pUd(ji,jj+jp)*p1_e1Y(ji,jj+jp) - pUd(ji,jj+jm)*p1_e1Y(ji,jj+jm) ) * ze1e1 * zzf
+            zS2 = ( pVd(ji+ip,jj)*p1_e2X(ji+ip,jj) - pVd(ji+im,jj)*p1_e2X(ji+im,jj) ) * ze2e2 * zzf
 
-      pshr(ji,jj) = 0.5_wp * ( zS1 + zS2 )
+            pshr(ji,jj) = 0.5_wp * ( zS1 + zS2 )
 
-      IF( l_rtrn_dudy ) pdudy(ji,jj) = zS1
-      IF( l_rtrn_dvdx ) pdvdx(ji,jj) = zS2
-      IF( l_rtrn_maxshr ) THEN
-         zzf = zS1 + zS2
-         pmaxshr(ji,jj)  = SQRT( zE2*zE2 + zzf*zzf )
-      ENDIF
+            IF( l_rtrn_dudy ) pdudy(ji,jj) = zS1
+            IF( l_rtrn_dvdx ) pdvdx(ji,jj) = zS2
+            IF( l_rtrn_maxshr ) THEN
+               zzf = zS1 + zS2
+               pmaxshr(ji,jj)  = SQRT( zE2*zE2 + zzf*zzf )
+            ENDIF
 
       END_2D
 
@@ -734,18 +734,18 @@ CONTAINS
       zs3(:,:) = 2._wp * ps12h(:,:)      ! 2 * h * sigma_12
       !
       DO_2D( nn_hls-1, nn_hls-1, nn_hls-1, nn_hls-1 )
-      !                   !--- U points
-      pdivSx(ji,jj) = 0.5_wp * ( (( zs1(ji+ip,jj)                   - zs1(ji+im,jj)                  ) *   pe2x(ji,jj)  &
-         &                      + ( zs2(ji+ip,jj)*pe2e2(ji+ip,jj)   - zs2(ji+im,jj)*pe2e2(ji+im,jj)  ) * p1_e2x(ji,jj)) &
-         &                      + ( zs3(ji,jj+jp)*pe1e1_e(ji,jj+jp) - zs3(ji,jj+jm)*pe1e1_e(ji,jj+jm)) * p1_e1x(ji,jj)  &
-         &                      ) * p1_e1e2x(ji,jj)
-      !
-      !                !--- V points
-      pdivSy(ji,jj) = 0.5_wp * ( (( zs1(ji,jj-jm)                   - zs1(ji,jj-jp)                  ) *   pe1y(ji,jj)  &
-         &                      - ( zs2(ji,jj-jm)*pe1e1(ji,jj-jm)   - zs2(ji,jj-jp)*pe1e1(ji,jj-jp)  ) * p1_e1y(ji,jj)) &
-         &                      + ( zs3(ji-im,jj)*pe2e2_e(ji-im,jj) - zs3(ji-ip,jj)*pe2e2_e(ji-ip,jj)) * p1_e2y(ji,jj)  &
-         &                      ) * p1_e1e2y(ji,jj)
-      !
+            !                   !--- U points
+            pdivSx(ji,jj) = 0.5_wp * ( (( zs1(ji+ip,jj)                   - zs1(ji+im,jj)                  ) *   pe2x(ji,jj)  &
+               &                      + ( zs2(ji+ip,jj)*pe2e2(ji+ip,jj)   - zs2(ji+im,jj)*pe2e2(ji+im,jj)  ) * p1_e2x(ji,jj)) &
+               &                      + ( zs3(ji,jj+jp)*pe1e1_e(ji,jj+jp) - zs3(ji,jj+jm)*pe1e1_e(ji,jj+jm)) * p1_e1x(ji,jj)  &
+               &                      ) * p1_e1e2x(ji,jj)
+            !
+            !                !--- V points
+            pdivSy(ji,jj) = 0.5_wp * ( (( zs1(ji,jj-jm)                   - zs1(ji,jj-jp)                  ) *   pe1y(ji,jj)  &
+               &                      - ( zs2(ji,jj-jm)*pe1e1(ji,jj-jm)   - zs2(ji,jj-jp)*pe1e1(ji,jj-jp)  ) * p1_e1y(ji,jj)) &
+               &                      + ( zs3(ji-im,jj)*pe2e2_e(ji-im,jj) - zs3(ji-ip,jj)*pe2e2_e(ji-ip,jj)) * p1_e2y(ji,jj)  &
+               &                      ) * p1_e1e2y(ji,jj)
+            !
       END_2D
       !
    END SUBROUTINE div_stress_tensor_v2
