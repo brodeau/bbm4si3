@@ -52,9 +52,9 @@ MODULE iceistate
    !                             !! ** namelist (namini) **
    LOGICAL, PUBLIC  ::   ln_iceini        !: Ice initialization or not
    INTEGER, PUBLIC  ::   nn_iceini_file   !: Ice initialization:
-                                  !        0 = Initialise sea ice based on SSTs
-                                  !        1 = Initialise sea ice from single category netcdf file
-                                  !        2 = Initialise sea ice from multi category restart file
+   !        0 = Initialise sea ice based on SSTs
+   !        1 = Initialise sea ice from single category netcdf file
+   !        2 = Initialise sea ice from multi category restart file
    REAL(wp) ::   rn_thres_sst
    REAL(wp) ::   rn_hti_ini_n, rn_hts_ini_n, rn_ati_ini_n, rn_smi_ini_n, rn_tmi_ini_n, rn_tsu_ini_n, rn_tms_ini_n
    REAL(wp) ::   rn_hti_ini_s, rn_hts_ini_s, rn_ati_ini_s, rn_smi_ini_s, rn_tmi_ini_s, rn_tsu_ini_s, rn_tms_ini_s

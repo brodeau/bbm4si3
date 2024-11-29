@@ -351,7 +351,7 @@ CONTAINS
       !! Add-ons Brodeau for bbm
       REAL(wp), DIMENSION(jpi,jpj) :: ztmp1, ztmp2, ztmp3, ztmp4, ztmp5, zAt, zAf, zht, zhf, z1_h_t, z1_h_f
       REAL(wp) :: zh, zt1, zt2, ztame, zmacc
-      REAL(wp) :: zCorio, zU, zV, zMdt, zUo, zVo
+      REAL(wp) :: zCorio, zUi, zVi, zMdt, zUo, zVo
       !!-------------------------------------------------------------------
 
       IF( kt == nit000 .AND. lwp )   WRITE(numout,*) '-- ice_dyn_rhg_bbm: BBM sea-ice rheology'
@@ -722,29 +722,33 @@ CONTAINS
       ENDIF
       IF( iom_use('taumFai') ) CALL iom_put( 'taumFai' , SQRT(ztauxVai*ztauxVai + ztauyUai*ztauyUai)*xmsk_ice_f )  !#fixme: ugly!!!
 
-      ! --- ice-ocean stress:
+      ! --- ice-ocean stress (multiplied by `A`, just as in momentum equation !):
       IF( iom_use('taum_oi') .OR. iom_use('utau_oi') .OR. iom_use('vtau_oi') ) THEN
          ztmp1(:,:) = umask(:,:,1)
          WHERE( zAu(:,:) < rclean_below_A ) ztmp1(:,:) = 0._wp
          ztmp3(:,:) = u_ice(:,:) - u_oce(:,:) ! dU @U
          ztmp4(:,:) = vUice(:,:) - vUoce(:,:) ! dV @U
          ztmp2(:,:) = SQRT( ztmp3(:,:)*ztmp3(:,:) + ztmp4(:,:)*ztmp4(:,:) ) ! module of relative current at U-point
-         zfUu (:,:) = zrhoco * ztmp2(:,:) * ( u_oce(:,:) - u_ice(:,:) )
-         IF( iom_use('utau_oi') ) CALL iom_put( 'utau_oi' , zfUu(:,:) * ztmp1 )  ! oce-ice stress /x @ U. MIND: x A !!!
-         !!
+         zfUu (:,:) = zAu(:,:) * zrhoco * ztmp2(:,:) * ( u_oce(:,:) - u_ice(:,:) ) * ztmp1
+         !
          ztmp1(:,:) = vmask(:,:,1)
          WHERE( zAv(:,:) < rclean_below_A ) ztmp1(:,:) = 0._wp
          ztmp3(:,:) = v_ice(:,:) - v_oce(:,:) ! dV @V
          ztmp4(:,:) = uVice(:,:) - uVoce(:,:) ! dU @V
          ztmp2(:,:) = SQRT( ztmp3(:,:)*ztmp3(:,:) + ztmp4(:,:)*ztmp4(:,:) ) ! module of relative current at V-point
-         zfVv (:,:) = zrhoco * ztmp2(:,:) * ( v_oce(:,:) - v_ice(:,:) )
-         IF( iom_use('vtau_oi') ) CALL iom_put( 'vtau_oi' , zfVv(:,:) * ztmp1 )  ! oce-ice stress /y @ V MIND: x A !!!
+         zfVv (:,:) = zAv(:,:) * zrhoco * ztmp2(:,:) * ( v_oce(:,:) - v_ice(:,:) ) * ztmp1
          !
          IF( iom_use('taum_oi') ) THEN
+            !! Module of O/I stress at T points
             ztmp1(2:jpi,:) = 0.5_wp * ( zfUu(2:jpi,:) + zfUu(1:jpi-1,:) )
             ztmp2(:,2:jpj) = 0.5_wp * ( zfVv(:,2:jpj) + zfVv(:,1:jpj-1) )
-            CALL iom_put( 'taum_oi' , SQRT(ztmp1*ztmp1 + ztmp2*ztmp2) * ztmp3 *xmsk_ice_t )
+            ztmp3(:,:) = SQRT(ztmp1*ztmp1 + ztmp2*ztmp2)
          END IF
+         !
+         CALL lbc_lnk( 'icedyn_rhg_bbm', zfUu,'U',-1._wp, zfVv,'V',-1._wp, ztmp3,'T',1._wp )
+         IF( iom_use('utau_oi') ) CALL iom_put( 'utau_oi' , zfUu(:,:) )  ! oce-ice stress /x @ U. MIND: x A !!!
+         IF( iom_use('vtau_oi') ) CALL iom_put( 'vtau_oi' , zfVv(:,:) )  ! oce-ice stress /y @ V MIND: x A !!!
+         IF( iom_use('taum_oi') ) CALL iom_put( 'taum_oi' , ztmp3 * xmsk_ice_t )
          !
       ENDIF
       !
