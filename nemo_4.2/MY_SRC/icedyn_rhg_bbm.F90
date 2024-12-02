@@ -4,13 +4,15 @@ MODULE icedyn_rhg_bbm
    !!   Sea-Ice dynamics : rheology Britle Maxwell X
    !!======================================================================
    !! History :
-   !!            4.2  !  2024     (L. Brodeau) `BBM` [starting from `icedyn_rhg_evp`]
+   !!            4.2  !  2024     (L. Brodeau) original code
+   !!                   `BBM` [starting from `icedyn_rhg_evp`]
+   !!
    !!                   Please cite: Brodeau et al. 2024,
    !!                           "Implementation of a brittle sea-ice rheology in an Eulerian,
    !!                            finite-difference, C-grid modeling framework: Impact on the
    !!                            simulated deformation of sea-ice in the Arctic"
    !!                            Geoscientific Model Development (GMD)
-   !!                          https://doi.org/10.5194/gmd-17-6051-2024
+   !!                     =>    https://doi.org/10.5194/gmd-17-6051-2024
    !!----------------------------------------------------------------------
 #if defined key_si3
    !!----------------------------------------------------------------------

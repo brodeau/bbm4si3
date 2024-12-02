@@ -3,7 +3,7 @@ MODULE icedyn_rhg_util
    !!                     ***  MODULE  icedyn_rhg_util  ***
    !!   Sea-Ice dynamics : master routine for rheology
    !!======================================================================
-   !! history :  4.0  !  2018     (C. Rousset)      Original code
+   !! history :  4.2  !  2024     (L. Brodeau)      Original code
    !!----------------------------------------------------------------------
 #if defined key_si3
    !!----------------------------------------------------------------------
