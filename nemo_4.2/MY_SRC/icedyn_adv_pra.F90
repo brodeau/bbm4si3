@@ -48,7 +48,6 @@ MODULE icedyn_adv_pra
    REAL(wp), PARAMETER :: rr_scl_fct = 1.E-6_wp
    REAL(wp), PARAMETER :: r1_scl_fct = 1.E6_wp
 
-   
    !! * Substitutions
 #  include "do_loop_substitute.h90"
    !!----------------------------------------------------------------------

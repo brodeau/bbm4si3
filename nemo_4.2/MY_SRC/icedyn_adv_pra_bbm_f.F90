@@ -42,7 +42,10 @@ MODULE icedyn_adv_pra_bbm_f
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd1, sydd1, sxxdd1, syydd1, sxydd1   ! ice damage
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd2, sydd2, sxxdd2, syydd2, sxydd2   ! ice damage
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:)   ::   sxdd3, sydd3, sxxdd3, syydd3, sxydd3   ! ice damage
-   !
+
+   REAL(wp), PARAMETER :: rr_scl_fct = 1.E-6_wp
+   REAL(wp), PARAMETER :: r1_scl_fct = 1.E6_wp
+
    !! * Substitutions
 #  include "do_loop_substitute.h90"
    !!----------------------------------------------------------------------
@@ -111,14 +114,15 @@ CONTAINS
       z1_dt = 1._wp / zdt
 
       ! --- transport --- !
-      zudy(:,:) = pu_ice(:,:) * e2v(:,:)
-      zvdx(:,:) = pv_ice(:,:) * e1u(:,:)
+      zudy(:,:) = pu_ice(:,:) * e2v(:,:) * rr_scl_fct    ! `rr_scl_fct` because we work with km^2 rather than m^2 !!!
+      zvdx(:,:) = pv_ice(:,:) * e1u(:,:) * rr_scl_fct    !       "                     "
 
       DO jt = 1, icycle
 
-         z2d(:,:) = e1e2f(:,:) * 1.E-6_wp  ! cell area in km^2
+         z2d(:,:) = e1e2f(:,:) * rr_scl_fct * xmskf(:,:)  ! cell area in km^2
 
          ! --- transported fields --- !
+         zarea(:,:) = z2d(:,:)
          z0di (:,:) = p1md (:,:) * z2d(:,:)        ! Damage content !#bbm
          IF(l_advect_sigma) THEN
             z0d1 (:,:) = pdd1 (:,:) * z2d(:,:)        ! Damage content !#bbm
@@ -130,30 +134,30 @@ CONTAINS
          !                                                                  !--------------------------------------------!
          IF( MOD( (kt - 1) / nn_fsbc , 2 ) ==  MOD( (jt - 1) , 2 ) ) THEN   !==  odd ice time step:  adv_x then adv_y  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0di, sx1md, sxx1md, sy1md, syy1md, sxy1md )
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0di, sx1md, sxx1md, sy1md, syy1md, sxy1md )
             IF(l_advect_sigma) THEN
-               CALL adv_x( zdt , zudy , 1._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
-               CALL adv_y( zdt , zvdx , 0._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
-               CALL adv_x( zdt , zudy , 1._wp , zarea , z0d2  , sxdd2 , sxxdd2 , sydd2 , syydd2 , sxydd2 )
-               CALL adv_y( zdt , zvdx , 0._wp , zarea , z0d2  , sxdd2 , sxxdd2 , sydd2 , syydd2 , sxydd2 )
-               CALL adv_x( zdt , zudy , 1._wp , zarea , z0d3  , sxdd3 , sxxdd3 , sydd3 , syydd3 , sxydd3 )
-               CALL adv_y( zdt , zvdx , 0._wp , zarea , z0d3  , sxdd3 , sxxdd3 , sydd3 , syydd3 , sxydd3 )
+               CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0d1, sxdd1, sxxdd1, sydd1, syydd1, sxydd1 )
+               CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0d1, sxdd1, sxxdd1, sydd1, syydd1, sxydd1 )
+               CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0d2, sxdd2, sxxdd2, sydd2, syydd2, sxydd2 )
+               CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0d2, sxdd2, sxxdd2, sydd2, syydd2, sxydd2 )
+               CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0d3, sxdd3, sxxdd3, sydd3, syydd3, sxydd3 )
+               CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0d3, sxdd3, sxxdd3, sydd3, syydd3, sxydd3 )
             ENDIF
             !
             !
             !                                                               !--------------------------------------------!
          ELSE                                                               !== even ice time step:  adv_y then adv_x  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0di  , sx1md , sxx1md , sy1md , syy1md , sxy1md )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0di, sx1md, sxx1md, sy1md, syy1md, sxy1md )
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0di, sx1md, sxx1md, sy1md, syy1md, sxy1md )
             IF(l_advect_sigma) THEN
-               CALL adv_y( zdt , zvdx , 1._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
-               CALL adv_x( zdt , zudy , 0._wp , zarea , z0d1  , sxdd1 , sxxdd1 , sydd1 , syydd1 , sxydd1 )
-               CALL adv_y( zdt , zvdx , 1._wp , zarea , z0d2  , sxdd2 , sxxdd2 , sydd2 , syydd2 , sxydd2 )
-               CALL adv_x( zdt , zudy , 0._wp , zarea , z0d2  , sxdd2 , sxxdd2 , sydd2 , syydd2 , sxydd2 )
-               CALL adv_y( zdt , zvdx , 1._wp , zarea , z0d3  , sxdd3 , sxxdd3 , sydd3 , syydd3 , sxydd3 )
-               CALL adv_x( zdt , zudy , 0._wp , zarea , z0d3  , sxdd3 , sxxdd3 , sydd3 , syydd3 , sxydd3 )
+               CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0d1, sxdd1, sxxdd1, sydd1, syydd1, sxydd1 )
+               CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0d1, sxdd1, sxxdd1, sydd1, syydd1, sxydd1 )
+               CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0d2, sxdd2, sxxdd2, sydd2, syydd2, sxydd2 )
+               CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0d2, sxdd2, sxxdd2, sydd2, syydd2, sxydd2 )
+               CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0d3, sxdd3, sxxdd3, sydd3, syydd3, sxydd3 )
+               CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0d3, sxdd3, sxxdd3, sydd3, syydd3, sxydd3 )
             ENDIF
             !
          ENDIF
@@ -175,7 +179,7 @@ CONTAINS
          ENDIF
 
          ! --- Recover the properties from their contents --- !
-         z2d(:,:) = 1.E6_wp * r1_e1e2f(:,:) * xmskf(:,:)
+         z2d(:,:) = r1_scl_fct * r1_e1e2f(:,:) * xmskf(:,:)
          p1md (:,:) = z0di (:,:) * z2d(:,:) !#bbm
          IF(l_advect_sigma) THEN
             pdd1 (:,:) = z0d1 (:,:) * z2d(:,:) !#bbm
@@ -192,33 +196,34 @@ CONTAINS
    END SUBROUTINE ice_dyn_adv_pra_f_d
 
 
-   SUBROUTINE adv_x( pdt, puf, pcrh, psm, ps0, psx, psxx, psy, psyy, psxy )
-      !!----------------------------------------------------------------------
+   SUBROUTINE adv_x( pdt, puf, pcrh, pe1e2, psm, ps0, psx, psxx, psy, psyy, psxy )
+      !!---------------------------------------------------------------------
       !!                **  routine adv_x  **
       !!
       !! ** purpose :   Computes and adds the advection trend to sea-ice
       !!                variable on x axis
       !!----------------------------------------------------------------------
       REAL(wp)                , INTENT(in   ) ::   pdt                ! the time step
-      REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
       REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   puf                ! i-direction ice velocity at V-point [m/s]
+      REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
+      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pe1e2
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psx , psy          ! 1st moments
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psxx, psyy, psxy   ! 2nd moments
       !!
-      INTEGER  ::   ji, jj                     ! dummy loop indices
+      INTEGER  ::   ji, jj                               ! dummy loop indices
       INTEGER  ::   kj0                                  ! dummy loop indices
-      REAL(wp) ::   zs1max, zslpmax, ztemp               ! local scalars
-      REAL(wp) ::   zs1new, zalf , zalfq , zbt           !   -      -
-      REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !   -      -
-      REAL(wp) ::   zpsm, zps0
+      REAL(wp) ::   zs1max, zslpmax, ztemp               ! temporary scalars
+      REAL(wp) ::   zs1new, zalf , zalfq , zbt           !    -         -
+      REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !    -         -
+      REAL(wp) ::   ze1e2, zpsm, zps0
       REAL(wp) ::   zpsx, zpsy, zpsxx, zpsyy, zpsxy
       REAL(wp) ::   zmask, zU
-      REAL(wp), DIMENSION(jpi,jpj) ::   zf0 , zfx  , zfy   , zbet   ! 2D workspace
-      REAL(wp), DIMENSION(jpi,jpj) ::   zfm , zfxx , zfyy  , zfxy   !  -      -
-      REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q         !  -      -
-      !-----------------------------------------------------------------------
+      REAL(wp), DIMENSION(jpi,jpj) ::   zf0, zfx , zfy , zbet   ! 2D workspace
+      REAL(wp), DIMENSION(jpi,jpj) ::   zfm, zfxx, zfyy, zfxy   !  -      -
+      REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q     !  -      -
+      !---------------------------------------------------------------------
       ! in order to avoid lbc_lnk (communications):
       !    jj loop must be 1:jpj   if adv_x is called first
       !                and 2:jpj-1 if adv_x is called second
@@ -228,9 +233,11 @@ CONTAINS
       DO_2D( 1, 0, kj0, kj0 )
             !! Only `ji+1` needed
             !! => [0:jpi-1] for `ji` !
+            !
             zmask = xmskf(ji,jj)
             zU    = puf(ji+1,jj)
             !
+            ze1e2 = pe1e2(ji,jj)
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
             zpsx  = psx (ji,jj)
@@ -239,8 +246,8 @@ CONTAINS
             zpsyy = psyy(ji,jj)
             zpsxy = psxy(ji,jj)
 
-            !  Initialize volumes of boxes  (=area if adv_x first called, =psm otherwise)
-            zpsm = MAX( pcrh * e1e2f(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20 )
+            !  Initialize volumes of boxes (=area if adv_x first called, =psm otherwise)
+            zpsm = MAX( pcrh * ze1e2  +  ( 1.0 - pcrh ) * zpsm , epsi20 )
             !
             zslpmax = MAX( 0._wp, zps0 )
             zs1max  = 1.5 * zslpmax
@@ -249,10 +256,10 @@ CONTAINS
             rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * zmask ! Case of empty boxes & Apply mask
 
             zps0  = zslpmax
-            zpsx  = zs1new  * rswitch
-            zpsxx = zs2new  * rswitch
-            zpsy  = zpsy    * rswitch
-            zpsyy = zpsyy   * rswitch
+            zpsx  = zs1new * rswitch
+            zpsxx = zs2new * rswitch
+            zpsy  = zpsy   * rswitch
+            zpsyy = zpsyy  * rswitch
             zpsxy = MIN( zslpmax, MAX( -zslpmax, zpsxy ) ) * rswitch
 
             !  Calculate fluxes and moments between boxes i<-->i+1
@@ -266,13 +273,13 @@ CONTAINS
             zalf1        =  1.0 - zalf
             zalf1q       =  zalf1 * zalf1
             !
-            zfm (ji,jj)  =  zalf  *   zpsm
+            zfm (ji,jj)  =  zalf  * zpsm
             zf0 (ji,jj)  =  zalf  * ( zps0  + zalf1 * ( zpsx + (zalf1 - zalf) * zpsxx ) )
             zfx (ji,jj)  =  zalfq * ( zpsx  + 3.0 * zalf1 * zpsxx )
-            zfxx(ji,jj)  =  zalf  *   zpsxx * zalfq
+            zfxx(ji,jj)  =  zalf  * zalfq * zpsxx
             zfy (ji,jj)  =  zalf  * ( zpsy  + zalf1 * zpsxy )
-            zfxy(ji,jj)  =  zalfq *   zpsxy
-            zfyy(ji,jj)  =  zalf  *   zpsyy
+            zfxy(ji,jj)  =  zalfq * zpsxy
+            zfyy(ji,jj)  =  zalf  * zpsyy
             !                                !  Readjust moments remaining in the box.
             zpsm  =  zpsm  - zfm(ji,jj)
             zps0  =  zps0  - zf0(ji,jj)
@@ -331,6 +338,9 @@ CONTAINS
       DO_2D( 0, 1, kj0, kj0 )
             !! Only `ji-1` needed
             !! => [2:jpi] for `ji` !
+            !                                !  Readjust moments remaining in the box.
+            zbt  =       zbet(ji-1,jj)
+            zbt1 = 1.0 - zbet(ji-1,jj)
             !
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
@@ -339,9 +349,6 @@ CONTAINS
             zpsy  = psy (ji,jj)
             zpsyy = psyy(ji,jj)
             zpsxy = psxy(ji,jj)
-            !                                !  Readjust moments remaining in the box.
-            zbt  =       zbet(ji-1,jj)
-            zbt1 = 1.0 - zbet(ji-1,jj)
             !
             zpsm  = zbt * zpsm + zbt1 * ( zpsm - zfm(ji-1,jj) )
             zps0  = zbt * zps0 + zbt1 * ( zps0 - zf0(ji-1,jj) )
@@ -368,8 +375,8 @@ CONTAINS
             zpsxy =  zbt  * ( zalf * zfxy(ji-1,jj) + zalf1 * zpsxy            &
                &            + 3.0 * (- zalf1*zfy(ji-1,jj)  + zalf * zpsy ) )  &
                &            + zbt1 * zpsxy
-            zpsy  =  zbt  * ( zpsy  + zfy (ji-1,jj) ) + zbt1 * zpsy
-            zpsyy =  zbt  * ( zpsyy + zfyy(ji-1,jj) ) + zbt1 * zpsyy
+            zpsy  =  zbt * ( zpsy  + zfy (ji-1,jj) ) + zbt1 * zpsy
+            zpsyy =  zbt * ( zpsyy + zfyy(ji-1,jj) ) + zbt1 * zpsyy
 
             !                                !  Flux from i+1 to i IF u LT 0.
             zbt   =       zbet(ji,jj)
@@ -403,7 +410,7 @@ CONTAINS
    END SUBROUTINE adv_x
 
 
-   SUBROUTINE adv_y( pdt, pvf, pcrh, psm, ps0, psx, psxx, psy , psyy, psxy )
+   SUBROUTINE adv_y( pdt, pvf, pcrh, pe1e2, psm, ps0, psx, psxx, psy, psyy, psxy )
       !!---------------------------------------------------------------------
       !!                **  routine adv_y  **
       !!
@@ -411,19 +418,20 @@ CONTAINS
       !!                variable on y axis
       !!---------------------------------------------------------------------
       REAL(wp)                , INTENT(in   ) ::   pdt                ! time step
-      REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
       REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pvf                ! j-direction ice velocity at U-point [m/s]
+      REAL(wp)                , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
+      REAL(wp), DIMENSION(:,:), INTENT(in   ) ::   pe1e2
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psx , psy          ! 1st moments
       REAL(wp), DIMENSION(:,:), INTENT(inout) ::   psxx, psyy, psxy   ! 2nd moments
       !!
-      INTEGER  ::   ji, jj                     ! dummy loop indices
+      INTEGER  ::   ji, jj                               ! dummy loop indices
       INTEGER  ::   ki0                                  ! dummy loop indices
       REAL(wp) ::   zs1max, zslpmax, ztemp               ! temporary scalars
       REAL(wp) ::   zs1new, zalf , zalfq , zbt           !    -         -
       REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !    -         -
-      REAL(wp) ::   zpsm, zps0
+      REAL(wp) ::   ze1e2, zpsm, zps0
       REAL(wp) ::   zpsx, zpsy, zpsxx, zpsyy, zpsxy
       REAL(wp) ::   zmask, zV
       REAL(wp), DIMENSION(jpi,jpj) ::   zf0, zfx , zfy , zbet   ! 2D workspace
@@ -443,6 +451,7 @@ CONTAINS
             zmask = xmskf(ji,jj)
             zV    = pvf(ji,jj+1)
             !
+            ze1e2 = pe1e2(ji,jj)
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
             zpsx  = psx (ji,jj)
@@ -450,21 +459,21 @@ CONTAINS
             zpsy  = psy (ji,jj)
             zpsyy = psyy(ji,jj)
             zpsxy = psxy(ji,jj)
-            !
+
             !  Initialize volumes of boxes (=area if adv_y first called, =psm otherwise)
-            zpsm = MAX(  pcrh * e1e2f(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20  )
+            zpsm = MAX( pcrh * ze1e2  +  ( 1.0 - pcrh ) * zpsm , epsi20 )
             !
             zslpmax = MAX( 0._wp, zps0 )
             zs1max  = 1.5 * zslpmax
             zs1new  = MIN( zs1max, MAX( -zs1max, zpsy ) )
-            zs2new  = MIN( ( 2.0 * zslpmax - 0.3334 * ABS( zs1new ) ), MAX( ABS( zs1new )-zslpmax, zpsyy ) )
-            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * zmask   ! Case of empty boxes & Apply mask
-            !
+            zs2new  = MIN( 2.0 * zslpmax - 0.3334 * ABS( zs1new ), MAX( ABS( zs1new ) - zslpmax, zpsyy ) )
+            rswitch = ( 1.0 - MAX( 0._wp, SIGN( 1._wp, -zslpmax) ) ) * zmask ! Case of empty boxes & Apply mask
+
             zps0  = zslpmax
-            zpsx  = zpsx  * rswitch
-            zpsxx = zpsxx * rswitch
-            zpsy  = zs1new         * rswitch
-            zpsyy = zs2new         * rswitch
+            zpsx  = zpsx   * rswitch
+            zpsxx = zpsxx  * rswitch
+            zpsy  = zs1new * rswitch
+            zpsyy = zs2new * rswitch
             zpsxy = MIN( zslpmax, MAX( -zslpmax, zpsxy ) ) * rswitch
 
             !  Calculate fluxes and moments between boxes j<-->j+1
@@ -477,20 +486,19 @@ CONTAINS
             !
             zfm (ji,jj)  =  zalf  * zpsm
             zf0 (ji,jj)  =  zalf  * ( zps0 + zalf1 * ( zpsy  + (zalf1-zalf) * zpsyy ) )
-            zfy (ji,jj)  =  zalfq *( zpsy + 3.0*zalf1*zpsyy )
+            zfy (ji,jj)  =  zalfq * ( zpsy + 3.0*zalf1*zpsyy )
             zfyy(ji,jj)  =  zalf  * zalfq * zpsyy
             zfx (ji,jj)  =  zalf  * ( zpsx + zalf1 * zpsxy )
             zfxy(ji,jj)  =  zalfq * zpsxy
             zfxx(ji,jj)  =  zalf  * zpsxx
-            !
             !                                !  Readjust moments remaining in the box.
-            zpsm   =  zpsm  - zfm(ji,jj)
-            zps0   =  zps0  - zf0(ji,jj)
-            zpsy   =  zalf1q * ( zpsy -3.0 * zalf * zpsyy )
-            zpsyy  =  zalf1 * zalf1q * zpsyy
-            zpsx   =  zpsx  - zfx(ji,jj)
-            zpsxx  =  zpsxx - zfxx(ji,jj)
-            zpsxy  =  zalf1q * zpsxy
+            zpsm  =  zpsm  - zfm(ji,jj)
+            zps0  =  zps0  - zf0(ji,jj)
+            zpsy  =  zalf1q * ( zpsy -3.0 * zalf * zpsyy )
+            zpsyy =  zalf1 * zalf1q * zpsyy
+            zpsx  =  zpsx  - zfx(ji,jj)
+            zpsxx =  zpsxx - zfxx(ji,jj)
+            zpsxy =  zalf1q * zpsxy
             !
             psm (ji,jj) = zpsm ! optimization
             ps0 (ji,jj) = zps0
@@ -499,6 +507,7 @@ CONTAINS
             psy (ji,jj) = zpsy
             psyy(ji,jj) = zpsyy
             psxy(ji,jj) = zpsxy
+            !
       END_2D
       ! ji+ ji- jj+ jj-
       !LB: because of the F-centric world, need to link here => to fill the j+1
@@ -540,8 +549,8 @@ CONTAINS
             !! Only `jj-1` needed
             !! => [2:jpj] for `jj` !
             !                                !  Readjust moments remaining in the box.
-            zbt  =         zbet(ji,jj-1)
-            zbt1 = ( 1.0 - zbet(ji,jj-1) )
+            zbt  =       zbet(ji,jj-1)
+            zbt1 = 1.0 - zbet(ji,jj-1)
             !
             zpsm  = psm (ji,jj) ! optimization
             zps0  = ps0 (ji,jj)
@@ -568,17 +577,16 @@ CONTAINS
             zalf1 = 1.0 - zalf
             ztemp = zalf * zps0 - zalf1 * zf0(ji,jj-1)
             !
-            zps0  =   zbt  * ( zps0 + zf0(ji,jj-1) ) + zbt1 * zps0
-            zpsy  =   zbt  * ( zalf * zfy(ji,jj-1) + zalf1 * zpsy + 3.0 * ztemp )  &
-               &             + zbt1 * zpsy
-            zpsyy =   zbt  * ( zalf * zalf * zfyy(ji,jj-1) + zalf1 * zalf1 * zpsyy                           &
-               &             + 5.0 * ( zalf * zalf1 * ( zpsy - zfy(ji,jj-1) ) - ( zalf1 - zalf ) * ztemp ) ) &
-               &             + zbt1 * zpsyy
-            zpsxy =   zbt  * ( zalf * zfxy(ji,jj-1) + zalf1 * zpsxy             &
-               &             + 3.0 * (- zalf1 * zfx(ji,jj-1) + zalf * zpsx ) )  &
-               &             + zbt1 * zpsxy
-            zpsx  =   zbt * ( zpsx  + zfx (ji,jj-1) ) + zbt1 * zpsx
-            zpsxx =   zbt * ( zpsxx + zfxx(ji,jj-1) ) + zbt1 * zpsxx
+            zps0  =  zbt  * ( zps0 + zf0(ji,jj-1) ) + zbt1 * zps0
+            zpsy  =  zbt  * ( zalf * zfy(ji,jj-1) + zalf1 * zpsy + 3.0 * ztemp ) + zbt1 * zpsy
+            zpsyy =  zbt  * ( zalf * zalf * zfyy(ji,jj-1) + zalf1 * zalf1 * zpsyy                           &
+               &            + 5.0 * ( zalf * zalf1 * ( zpsy - zfy(ji,jj-1) ) - ( zalf1 - zalf ) * ztemp ) ) &
+               &            + zbt1 * zpsyy
+            zpsxy =  zbt  * ( zalf * zfxy(ji,jj-1) + zalf1 * zpsxy             &
+               &            + 3.0 * (- zalf1 * zfx(ji,jj-1) + zalf * zpsx ) )  &
+               &            + zbt1 * zpsxy
+            zpsx  =  zbt * ( zpsx  + zfx (ji,jj-1) ) + zbt1 * zpsx
+            zpsxx =  zbt * ( zpsxx + zfxx(ji,jj-1) ) + zbt1 * zpsxx
 
             !                                !  Flux from j+1 to j IF v LT 0.
             zbt   =       zbet(ji,jj)
