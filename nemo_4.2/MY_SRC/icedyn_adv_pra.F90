@@ -175,7 +175,7 @@ CONTAINS
          ! record at_i before advection (for open water)
          zati1(:,:) = SUM( pa_i(:,:,:), dim=3 )
 
-         z2d(:,:) = e1e2t(:,:)  ! cell area !
+         z2d(:,:) = e1e2t(:,:) * 1.E-6_wp  ! cell area in km^2
 
          ! --- transported fields --- !
          DO jl = 1, jpl
@@ -186,16 +186,16 @@ CONTAINS
             z0smi(:,:,jl) = psv_i(:,:,jl) * z2d(:,:)        ! Salt content
             z0oi (:,:,jl) = poa_i(:,:,jl) * z2d(:,:)        ! Age content
             DO jk = 1, nlay_s
-               z0es(:,:,jk,jl) = pe_s(:,:,jk,jl) * e1e2t(:,:) ! Snow heat content
+               z0es(:,:,jk,jl) = pe_s(:,:,jk,jl) * z2d(:,:) ! Snow heat content
             END DO
             DO jk = 1, nlay_i
-               z0ei(:,:,jk,jl) = pe_i(:,:,jk,jl) * e1e2t(:,:) ! Ice  heat content
+               z0ei(:,:,jk,jl) = pe_i(:,:,jk,jl) * z2d(:,:) ! Ice  heat content
             END DO
             IF ( ln_pnd_LEV .OR. ln_pnd_TOPO ) THEN
-               z0ap(:,:,jl) = pa_ip(:,:,jl) * e1e2t(:,:)      ! Melt pond fraction
-               z0vp(:,:,jl) = pv_ip(:,:,jl) * e1e2t(:,:)      ! Melt pond volume
+               z0ap(:,:,jl) = pa_ip(:,:,jl) * z2d(:,:)      ! Melt pond fraction
+               z0vp(:,:,jl) = pv_ip(:,:,jl) * z2d(:,:)      ! Melt pond volume
                IF ( ln_pnd_lids ) THEN
-                  z0vl(:,:,jl) = pv_il(:,:,jl) * e1e2t(:,:)   ! Melt pond lid volume
+                  z0vl(:,:,jl) = pv_il(:,:,jl) * z2d(:,:)   ! Melt pond lid volume
                ENDIF
             ENDIF
          END DO
@@ -308,7 +308,7 @@ CONTAINS
          ENDIF
 
          ! --- Recover the properties from their contents --- !
-         z2d(:,:) = r1_e1e2t(:,:) * tmask(:,:,1)
+         z2d(:,:) = 1.E6_wp * r1_e1e2t(:,:) * tmask(:,:,1)
          DO jl = 1, jpl
             pv_i (:,:,jl) = z0ice(:,:,jl) * z2d(:,:)
             pv_s (:,:,jl) = z0snw(:,:,jl) * z2d(:,:)

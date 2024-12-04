@@ -78,6 +78,7 @@ CONTAINS
       REAL(wp) ::   zdt, z1_dt              !   -      -
       REAL(wp), DIMENSION(1)                  ::   zcflprv, zcflnow   ! for global communication
       REAL(wp), DIMENSION(jpi,jpj)            ::   zudy, zvdx
+      REAL(wp), DIMENSION(jpi,jpj)            ::   z2d
       REAL(wp), DIMENSION(jpi,jpj)            ::   zarea
       REAL(wp), DIMENSION(jpi,jpj)            ::   z0di, z0d1, z0d2, z0d3
       INTEGER :: ji, jj
@@ -115,14 +116,14 @@ CONTAINS
 
       DO jt = 1, icycle
 
-         zarea(:,:) = e1e2f(:,:)
+         z2d(:,:) = e1e2f(:,:) * 1.E-6_wp  ! cell area in km^2
 
          ! --- transported fields --- !
-         z0di (:,:) = p1md (:,:) * zarea(:,:)        ! Damage content !#bbm
+         z0di (:,:) = p1md (:,:) * z2d(:,:)        ! Damage content !#bbm
          IF(l_advect_sigma) THEN
-            z0d1 (:,:) = pdd1 (:,:) * zarea(:,:)        ! Damage content !#bbm
-            z0d2 (:,:) = pdd2 (:,:) * zarea(:,:)        ! Damage content !#bbm
-            z0d3 (:,:) = pdd3 (:,:) * zarea(:,:)        ! Damage content !#bbm
+            z0d1 (:,:) = pdd1 (:,:) * z2d(:,:)        ! Damage content !#bbm
+            z0d2 (:,:) = pdd2 (:,:) * z2d(:,:)        ! Damage content !#bbm
+            z0d3 (:,:) = pdd3 (:,:) * z2d(:,:)        ! Damage content !#bbm
          END IF
          !
          !
@@ -174,12 +175,12 @@ CONTAINS
          ENDIF
 
          ! --- Recover the properties from their contents --- !
-         zarea(:,:) = r1_e1e2f(:,:) * xmskf(:,:)
-         p1md (:,:) = z0di (:,:) * zarea(:,:) !#bbm
+         z2d(:,:) = 1.E6_wp * r1_e1e2f(:,:) * xmskf(:,:)
+         p1md (:,:) = z0di (:,:) * z2d(:,:) !#bbm
          IF(l_advect_sigma) THEN
-            pdd1 (:,:) = z0d1 (:,:) * zarea(:,:) !#bbm
-            pdd2 (:,:) = z0d2 (:,:) * zarea(:,:) !#bbm
-            pdd3 (:,:) = z0d3 (:,:) * zarea(:,:) !#bbm
+            pdd1 (:,:) = z0d1 (:,:) * z2d(:,:) !#bbm
+            pdd2 (:,:) = z0d2 (:,:) * z2d(:,:) !#bbm
+            pdd3 (:,:) = z0d3 (:,:) * z2d(:,:) !#bbm
          END IF
 
          p1md(:,:) = MIN( MAX( p1md(:,:), 1._wp - rn_dmg_max ) , 1._wp ) !! `p1md` is `1-damage` !!!
