@@ -53,8 +53,12 @@ MODULE icedyn_adv
    LOGICAL, SAVE :: l_advct_stresses, l_advct_oldroyd !#bbm
 
    ! Transformation of stresses to something positive and not too large!!!
-   REAL(wp), PARAMETER :: r_sgm_sf    = 1.E-4_wp        ! scale-factor from Pa to 10xM.Pa
+   REAL(wp), PARAMETER :: r_sgm_sf    = 1.E-5_wp        ! scale-factor from Pa to 100xM.Pa
    REAL(wp), PARAMETER :: r_1_sgm_sf  = 1._wp/r_sgm_sf
+   REAL(wp), PARAMETER :: r_skk_ao    = 0.75_wp ! "add offset" (* r_sgm_sf) for compressive stress components (max possible value in traction => MAX(sigma_kk)/r_sgm_sf )
+   REAL(wp), PARAMETER :: r_s12_ao    = 1._wp   ! "add offset" (* r_sgm_sf) for shear stress component (max possible value => MAX(ABS(sigma_12))/r_sgm_sf )
+
+   
    REAL(wp), PARAMETER :: r_mltpl_s12 = 5.0_wp
    REAL(wp), PARAMETER :: r_mltpl_skk = 1.0_wp
 
@@ -87,8 +91,7 @@ CONTAINS
       REAL(wp), DIMENSION(jpi,jpj) :: zdudx, zdvdy, zdudy, zdvdx, zdiv  !#bbm
       REAL(wp), DIMENSION(jpi,jpj) :: zdmg_pos, zs11_pos, zs22_pos, zs12_pos  !#bbm
       REAL(wp), DIMENSION(jpi,jpj) :: zs11_ci, zs22_ci, zs12_ci ! increments for extra upper- or lower-convected terms...
-      REAL(wp)                     :: zm1t, zm1f,zm2t, zm2f
-      REAL(wp)                     :: z_skk_ao, z_s12_ao
+      REAL(wp)                     :: zm1t, zm1f, zm2t, zm2f, zmaxSkk, zminS12 !#bbm
       REAL(wp), DIMENSION(jpi,jpj) :: zmski_t, zmski_f  !#bbm !mask the advection of stress tensor below a certain A
       !!---------------------------------------------------------------------
       !
@@ -126,31 +129,24 @@ CONTAINS
          IF( nn_d_adv >= 1 ) THEN
 
             IF( l_advct_stresses ) THEN
-               
                zmski_t(:,:) = 1._wp
                zmski_f(:,:) = 1._wp
                WHERE( at_i(:,:) < r_sgm_adv_th ) zmski_t(:,:) = 0._wp
                WHERE( af_i(:,:) < r_sgm_adv_th ) zmski_f(:,:) = 0._wp
                
-               !! 1st, find the maximum values to pick an `add_offset` !
-               !! *** sgm11 & sgm22 ***
-               !!     for `skk` we nultiply it by `-1` so negative values will be smaller (normally: `HUGE_NEG_VAL < skk < SMALL_POS_VAL` )
-               zm1t = MAXVAL( sgm11t(:,:)*r_sgm_sf*xmskt(:,:) )
-               zm2t = MAXVAL( sgm22t(:,:)*r_sgm_sf*xmskt(:,:) )
-               zm1f = MAXVAL( sgm11f(:,:)*r_sgm_sf*xmskf(:,:) )
-               zm2f = MAXVAL( sgm22f(:,:)*r_sgm_sf*xmskf(:,:) )               
-               z_skk_ao = MAX( MAX(zm1t,zm2t), MAX(zm1f,zm2f) ) + 0.01_wp ! +0.01 to be sure we are larger!
-               CALL mpp_max( 'icedyn_adv', z_skk_ao )
-               z_skk_ao = r_mltpl_skk * REAL( CEILING( z_skk_ao/r_mltpl_skk) , wp ) ! we want it to be the multiple of `r_mltpl_skk` and just above...
-               z_skk_ao = MAX( z_skk_ao, 2._wp )
+               !! Checking that the `add_offset`s are large enough:
+               zm1t = MAXVAL( sgm11t(:,:) )
+               zm2t = MAXVAL( sgm22t(:,:) )
+               zm1f = MAXVAL( sgm11f(:,:) )
+               zm2f = MAXVAL( sgm22f(:,:) )
+               zmaxSkk = MAX( MAX(zm1t,zm2t), MAX(zm1f,zm2f) )
+               IF( zmaxSkk > r_skk_ao*r_1_sgm_sf ) CALL ctl_stop( 'ice_dyn_adv: `r_skk_ao` is not large enough!')
                !
-               !! *** sgm12 ***
-               zm1t = MINVAL( sgm12t(:,:)*r_sgm_sf*xmskt(:,:) )
-               zm1f = MINVAL( sgm12f(:,:)*r_sgm_sf*xmskf(:,:) )
-               z_s12_ao = -1._wp * MIN( zm1t, zm1f ) + 0.01_wp ! => positive |  ! +0.01 to be sure we are larger!
-               CALL mpp_max( 'icedyn_adv', z_s12_ao )
-               z_s12_ao = r_mltpl_s12 * REAL( CEILING( z_s12_ao/r_mltpl_s12) , wp ) ! be a multiple of `r_mltpl_s12` and just above it...
-               z_s12_ao = MAX( z_s12_ao, 5._wp )
+               zm1t = MINVAL( sgm12t(:,:) )
+               zm1f = MINVAL( sgm12f(:,:) )
+               zminS12 = MIN( zm1t, zm1f )
+               IF(-zminS12 > r_s12_ao*r_1_sgm_sf ) CALL ctl_stop( 'ice_dyn_adv: `r_s12_ao` is not large enough!')
+               !
             ENDIF
 
             !! Advect at T points with u@U, v@V velocities
@@ -161,9 +157,9 @@ CONTAINS
 
             IF( l_advct_stresses ) THEN
                ! Transform before advection:
-               zs11_pos = (-sgm11t*r_sgm_sf + z_skk_ao) * xmskt
-               zs22_pos = (-sgm22t*r_sgm_sf + z_skk_ao) * xmskt
-               zs12_pos = ( sgm12t*r_sgm_sf + z_s12_ao) * xmskt
+               zs11_pos = (-sgm11t*r_sgm_sf + r_skk_ao) * xmskt
+               zs22_pos = (-sgm22t*r_sgm_sf + r_skk_ao) * xmskt
+               zs12_pos = ( sgm12t*r_sgm_sf + r_s12_ao) * xmskt
                !!
                IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
                   WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
@@ -176,7 +172,6 @@ CONTAINS
                ENDIF
                !!
                IF(lwp) WRITE(numout,'("  *** advects damage & stresses @T with Prather, kt=",i6.6)') kt
-               IF(lwp) WRITE(numout,'("      ==> offset for `skk` and `s12`: ",f6.2,", ",f6.2)') z_skk_ao, z_s12_ao
                CALL ice_dyn_adv_pra_t_d( kt, u_ice, v_ice,  zdmg_pos, pdd1=zs12_pos, pdd2=zs11_pos, pdd3=zs22_pos )
             ELSE
                !!
@@ -212,9 +207,9 @@ CONTAINS
                END IF !IF( l_advct_oldroyd )
 
                !! Fall back after advection (and add upper- or lower-convected contrib if needed):
-               sgm11t = zmski_t * ( (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt  + zs11_ci )  +  (1._wp - zmski_t)*sgm11t
-               sgm22t = zmski_t * ( (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt  + zs22_ci )  +  (1._wp - zmski_t)*sgm22t
-               sgm12t = zmski_t * ( (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskt  + zs12_ci )  +  (1._wp - zmski_t)*sgm12t
+               sgm11t = zmski_t * ( (r_skk_ao - zs11_pos) * r_1_sgm_sf * xmskt  + zs11_ci )  +  (1._wp - zmski_t)*sgm11t
+               sgm22t = zmski_t * ( (r_skk_ao - zs22_pos) * r_1_sgm_sf * xmskt  + zs22_ci )  +  (1._wp - zmski_t)*sgm22t
+               sgm12t = zmski_t * ( (zs12_pos - r_s12_ao) * r_1_sgm_sf * xmskt  + zs12_ci )  +  (1._wp - zmski_t)*sgm12t
 
             ENDIF !IF( l_advct_stresses )
 
@@ -224,13 +219,13 @@ CONTAINS
             !! ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
             ! Transform before advection:
-            zdmg_pos = (1._wp - dmgf)                * xmskf
+            zdmg_pos = (1._wp - dmgf) * xmskf
 
             IF( l_advct_stresses ) THEN
                ! Transform before advection:
-               zs11_pos = (-sgm11f*r_sgm_sf + z_skk_ao) * xmskf
-               zs22_pos = (-sgm22f*r_sgm_sf + z_skk_ao) * xmskf
-               zs12_pos = ( sgm12f*r_sgm_sf + z_s12_ao) * xmskf
+               zs11_pos = (-sgm11f*r_sgm_sf + r_skk_ao) * xmskf
+               zs22_pos = (-sgm22f*r_sgm_sf + r_skk_ao) * xmskf
+               zs12_pos = ( sgm12f*r_sgm_sf + r_s12_ao) * xmskf
                !!
                IF( ANY(zs11_pos<0._wp) .OR. ANY(zs22_pos<0._wp) ) THEN
                   WRITE(numout,*) ' *** Min val for `zs11_pos`:', MINVAL(zs11_pos)
@@ -274,9 +269,9 @@ CONTAINS
                ENDIF
 
                !! Fall back after advection (and add upper- or lower-convected contrib if needed):
-               sgm11f = zmski_f * ( (z_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf  + zs11_ci )  +  (1._wp - zmski_f)*sgm11f
-               sgm22f = zmski_f * ( (z_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf  + zs22_ci )  +  (1._wp - zmski_f)*sgm22f
-               sgm12f = zmski_f * ( (zs12_pos - z_s12_ao) * r_1_sgm_sf * xmskf  + zs12_ci )  +  (1._wp - zmski_f)*sgm12f
+               sgm11f = zmski_f * ( (r_skk_ao - zs11_pos) * r_1_sgm_sf * xmskf  + zs11_ci )  +  (1._wp - zmski_f)*sgm11f
+               sgm22f = zmski_f * ( (r_skk_ao - zs22_pos) * r_1_sgm_sf * xmskf  + zs22_ci )  +  (1._wp - zmski_f)*sgm22f
+               sgm12f = zmski_f * ( (zs12_pos - r_s12_ao) * r_1_sgm_sf * xmskf  + zs12_ci )  +  (1._wp - zmski_f)*sgm12f
 
             END IF !IF( l_advct_stresses )
 
