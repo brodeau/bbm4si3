@@ -119,7 +119,7 @@ CONTAINS
 
       DO jt = 1, icycle
 
-         z2d(:,:) = e1e2t(:,:) * rr_scl_fct * xmskt(:,:)  ! cell area in km^2
+         z2d(:,:) = e1e2t(:,:) * rr_scl_fct !* xmskt(:,:)  ! cell area in km^2
 
          ! --- transported fields --- !
          zarea(:,:) = z2d(:,:)
@@ -311,7 +311,7 @@ CONTAINS
             !
             zfm   (ji,jj) = zfm (ji,jj) + zalf  *    psm (ji+1,jj)
             zf0   (ji,jj) = zf0 (ji,jj) + zalf  * (  ps0 (ji+1,jj) &
-               &          - zalf1 * ( psx(ji+1,jj) - (zalf1 - zalf ) * psxx(ji+1,jj) ) )
+               &            - zalf1 * ( psx(ji+1,jj) - (zalf1 - zalf ) * psxx(ji+1,jj) ) )
             zfx   (ji,jj) = zfx (ji,jj) + zalfq * (  psx (ji+1,jj) - 3.0 * zalf1 * psxx(ji+1,jj) )
             zfxx  (ji,jj) = zfxx(ji,jj) + zalf  *    psxx(ji+1,jj) * zalfq
             zfy   (ji,jj) = zfy (ji,jj) + zalf  * (  psy (ji+1,jj) - zalf1 * psxy(ji+1,jj) )

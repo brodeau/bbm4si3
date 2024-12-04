@@ -57,7 +57,7 @@ MODULE icedyn_adv_pra
    !!----------------------------------------------------------------------
 CONTAINS
 
-   SUBROUTINE ice_dyn_adv_pra(         kt, pu_ice, pv_ice, ph_i, ph_s, ph_ip,  &
+   SUBROUTINE ice_dyn_adv_pra( kt, pu_ice, pv_ice, ph_i, ph_s, ph_ip,  &
       &                        pato_i, pv_i, pv_s, psv_i, poa_i, pa_i, pa_ip, pv_ip, pv_il, pe_s, pe_i )
       !!----------------------------------------------------------------------
       !!                **  routine ice_dyn_adv_pra  **
@@ -178,7 +178,7 @@ CONTAINS
          ! record at_i before advection (for open water)
          zati1(:,:) = SUM( pa_i(:,:,:), dim=3 )
 
-         z2d(:,:) = e1e2t(:,:) * rr_scl_fct * xmskt(:,:)  ! cell area in km^2
+         z2d(:,:) = e1e2t(:,:) * rr_scl_fct !* xmskt(:,:)  ! cell area in km^2
 
          ! --- transported fields --- !
          DO jl = 1, jpl

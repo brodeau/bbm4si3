@@ -119,7 +119,7 @@ CONTAINS
 
       DO jt = 1, icycle
 
-         z2d(:,:) = e1e2f(:,:) * rr_scl_fct * xmskf(:,:)  ! cell area in km^2
+         z2d(:,:) = e1e2f(:,:) * rr_scl_fct !* xmskf(:,:)  ! cell area in km^2
 
          ! --- transported fields --- !
          zarea(:,:) = z2d(:,:)
@@ -264,9 +264,6 @@ CONTAINS
 
             !  Calculate fluxes and moments between boxes i<-->i+1
             !                                !  Flux from i to i+1 WHEN u GT 0
-            !! #F-centric:
-            !! When on T point:  flux from T_i to T_i+1 is done via u@U_i
-            !! But when F point: flux from F_i to F_i+1 is done via u@V_i+1 !!!
             zbet(ji,jj)  =  MAX( 0._wp, SIGN( 1._wp, zU ) )
             zalf         =  MAX( 0._wp, zU ) * pdt / zpsm
             zalfq        =  zalf * zalf
@@ -326,7 +323,7 @@ CONTAINS
             !
             zfm   (ji,jj) = zfm (ji,jj) + zalf  *    psm (ji+1,jj)
             zf0   (ji,jj) = zf0 (ji,jj) + zalf  * (  ps0 (ji+1,jj) &
-               &          - zalf1 * ( psx(ji+1,jj) - (zalf1 - zalf ) * psxx(ji+1,jj) ) )
+               &            - zalf1 * ( psx(ji+1,jj) - (zalf1 - zalf ) * psxx(ji+1,jj) ) )
             zfx   (ji,jj) = zfx (ji,jj) + zalfq * (  psx (ji+1,jj) - 3.0 * zalf1 * psxx(ji+1,jj) )
             zfxx  (ji,jj) = zfxx(ji,jj) + zalf  *    psxx(ji+1,jj) * zalfq
             zfy   (ji,jj) = zfy (ji,jj) + zalf  * (  psy (ji+1,jj) - zalf1 * psxy(ji+1,jj) )
