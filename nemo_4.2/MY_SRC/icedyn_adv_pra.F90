@@ -45,6 +45,10 @@ MODULE icedyn_adv_pra
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:,:)   ::   sxvp , syvp , sxxvp , syyvp , sxyvp    ! melt pond volume
    REAL(wp), ALLOCATABLE, SAVE, DIMENSION(:,:,:)   ::   sxvl , syvl , sxxvl , syyvl , sxyvl    ! melt pond lid volume
 
+   REAL(wp), PARAMETER :: rr_scl_fct = 1.E-6_wp
+   REAL(wp), PARAMETER :: r1_scl_fct = 1.E6_wp
+
+   
    !! * Substitutions
 #  include "do_loop_substitute.h90"
    !!----------------------------------------------------------------------
@@ -160,8 +164,8 @@ CONTAINS
       z1_dt = 1._wp / zdt
 
       ! --- transport --- !
-      zudy(:,:) = pu_ice(:,:) * e2u(:,:)
-      zvdx(:,:) = pv_ice(:,:) * e1v(:,:)
+      zudy(:,:) = pu_ice(:,:) * e2u(:,:) * rr_scl_fct    ! `rr_scl_fct` because we work with km^2 rather than m^2 !!!
+      zvdx(:,:) = pv_ice(:,:) * e1v(:,:) * rr_scl_fct    !       "                     "
 
       DO jt = 1, icycle
 
@@ -175,7 +179,7 @@ CONTAINS
          ! record at_i before advection (for open water)
          zati1(:,:) = SUM( pa_i(:,:,:), dim=3 )
 
-         z2d(:,:) = e1e2t(:,:) * 1.E-6_wp * xmskt(:,:)  ! cell area in km^2
+         z2d(:,:) = e1e2t(:,:) * rr_scl_fct * xmskt(:,:)  ! cell area in km^2
 
          ! --- transported fields --- !
          DO jl = 1, jpl
@@ -199,8 +203,7 @@ CONTAINS
                ENDIF
             ENDIF
          END DO
-         !
-         !                                                                  !--------------------------------------------!
+
          IF( MOD( (kt - 1) / nn_fsbc , 2 ) ==  MOD( (jt - 1) , 2 ) ) THEN   !==  odd ice time step:  adv_x then adv_y  ==!
             !                                                               !--------------------------------------------!
             CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0ice, sxice, sxxice, syice, syyice, sxyice ) !--- ice volume
@@ -308,7 +311,7 @@ CONTAINS
          ENDIF
 
          ! --- Recover the properties from their contents --- !
-         z2d(:,:) = 1.E6_wp * r1_e1e2t(:,:) * tmask(:,:,1)
+         z2d(:,:) = r1_scl_fct * r1_e1e2t(:,:) * tmask(:,:,1)
          DO jl = 1, jpl
             pv_i (:,:,jl) = z0ice(:,:,jl) * z2d(:,:)
             pv_s (:,:,jl) = z0snw(:,:,jl) * z2d(:,:)
@@ -331,10 +334,13 @@ CONTAINS
          END DO
          !
          ! derive open water from ice concentration
+         zudy(:,:) = zudy(:,:) * r1_scl_fct
+         zvdx(:,:) = zvdx(:,:) * r1_scl_fct
+         
          zati2(:,:) = SUM( pa_i(:,:,:), dim=3 )
          DO_2D( 0, 0, 0, 0 )
-         pato_i(ji,jj) = pato_i(ji,jj) - ( zati2(ji,jj) - zati1(ji,jj) ) &                        !--- open water
-            &                          - ( zudy(ji,jj) - zudy(ji-1,jj) + zvdx(ji,jj) - zvdx(ji,jj-1) ) * r1_e1e2t(ji,jj) * zdt
+               pato_i(ji,jj) = pato_i(ji,jj) - ( zati2(ji,jj) - zati1(ji,jj) ) &                        !--- open water
+                  &                          - ( zudy(ji,jj) - zudy(ji-1,jj) + zvdx(ji,jj) - zvdx(ji,jj-1) ) * r1_e1e2t(ji,jj) * zdt
          END_2D
          CALL lbc_lnk( crtnm, pato_i, cgrt,  1.0_wp )
          !

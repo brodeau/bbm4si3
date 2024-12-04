@@ -1,5 +1,5 @@
    SUBROUTINE adv_x( pdt, put, pcrh, pe1e2, psm, ps0, psx, psxx, psy, psyy, psxy )
-      !!----------------------------------------------------------------------
+      !!---------------------------------------------------------------------
       !!                **  routine adv_x  **
       !!
       !! ** purpose :   Computes and adds the advection trend to sea-ice
@@ -16,16 +16,16 @@
       !!
       INTEGER  ::   ji, jj, jl, jcat                     ! dummy loop indices
       INTEGER  ::   kj0                                  ! dummy loop indices
-      REAL(wp) ::   zs1max, zslpmax, ztemp               ! local scalars
-      REAL(wp) ::   zs1new, zalf , zalfq , zbt           !   -      -
-      REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !   -      -
-      REAL(wp) ::   zpsm, zps0
+      REAL(wp) ::   zs1max, zslpmax, ztemp               ! temporary scalars
+      REAL(wp) ::   zs1new, zalf , zalfq , zbt           !    -         -
+      REAL(wp) ::   zs2new, zalf1, zalf1q, zbt1          !    -         -
+      REAL(wp) ::   ze1e2, zpsm, zps0
       REAL(wp) ::   zpsx, zpsy, zpsxx, zpsyy, zpsxy
       REAL(wp) ::   zmask, zU
-      REAL(wp), DIMENSION(jpi,jpj) ::   zf0 , zfx  , zfy   , zbet   ! 2D workspace
-      REAL(wp), DIMENSION(jpi,jpj) ::   zfm , zfxx , zfyy  , zfxy   !  -      -
-      REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q         !  -      -
-      !-----------------------------------------------------------------------
+      REAL(wp), DIMENSION(jpi,jpj) ::   zf0, zfx , zfy , zbet   ! 2D workspace
+      REAL(wp), DIMENSION(jpi,jpj) ::   zfm, zfxx, zfyy, zfxy   !  -      -
+      REAL(wp), DIMENSION(jpi,jpj) ::   zalg, zalg1, zalg1q     !  -      -
+      !---------------------------------------------------------------------
       ! in order to avoid lbc_lnk (communications):
       !    jj loop must be 1:jpj   if adv_x is called first
       !                and 2:jpj-1 if adv_x is called second
@@ -37,10 +37,12 @@
       !
       ! Limitation of moments.
       DO_2D( 1, 1, kj0, kj0 )
-           !! => whole domain for `ji` !
+            !! => whole domain for `ji` !
+            !
             zmask = tmask(ji,jj,1)
             zU    = put(ji,jj)
             !
+            ze1e2 = pe1e2(ji,jj)
             zpsm  = psm (ji,jj,jl) ! optimization
             zps0  = ps0 (ji,jj,jl)
             zpsx  = psx (ji,jj,jl)
@@ -49,8 +51,8 @@
             zpsyy = psyy(ji,jj,jl)
             zpsxy = psxy(ji,jj,jl)
 
-            !  Initialize volumes of boxes  (=area if adv_x first called, =psm otherwise)
-            zpsm = MAX( pcrh * e1e2t(ji,jj)*1.E-6_wp + ( 1.0 - pcrh ) * zpsm , epsi20 )
+            !  Initialize volumes of boxes (=area if adv_x first called, =psm otherwise)
+            zpsm = MAX( pcrh * ze1e2  +  ( 1.0 - pcrh ) * zpsm , epsi20 )
             !
             zslpmax = MAX( 0._wp, zps0 )
             zs1max  = 1.5 * zslpmax
@@ -73,13 +75,13 @@
             zalf1        =  1.0 - zalf
             zalf1q       =  zalf1 * zalf1
             !
-            zfm (ji,jj)  =  zalf  *   zpsm
+            zfm (ji,jj)  =  zalf  * zpsm
             zf0 (ji,jj)  =  zalf  * ( zps0  + zalf1 * ( zpsx + (zalf1 - zalf) * zpsxx ) )
             zfx (ji,jj)  =  zalfq * ( zpsx  + 3.0 * zalf1 * zpsxx )
-            zfxx(ji,jj)  =  zalf  *   zpsxx * zalfq
+            zfxx(ji,jj)  =  zalf  * zalfq * zpsxx
             zfy (ji,jj)  =  zalf  * ( zpsy  + zalf1 * zpsxy )
-            zfxy(ji,jj)  =  zalfq *   zpsxy
-            zfyy(ji,jj)  =  zalf  *   zpsyy
+            zfxy(ji,jj)  =  zalfq * zpsxy
+            zfyy(ji,jj)  =  zalf  * zpsyy
             !                                !  Readjust moments remaining in the box.
             zpsm  =  zpsm  - zfm(ji,jj)
             zps0  =  zps0  - zf0(ji,jj)
@@ -125,6 +127,9 @@
       DO_2D( 0, 1, kj0, kj0 )
             !! Only `ji-1` needed
             !! => [2:jpi] for `ji` !
+            !                                !  Readjust moments remaining in the box.
+            zbt  =       zbet(ji-1,jj)
+            zbt1 = 1.0 - zbet(ji-1,jj)
             !
             zpsm  = psm (ji,jj,jl) ! optimization
             zps0  = ps0 (ji,jj,jl)
@@ -133,9 +138,6 @@
             zpsy  = psy (ji,jj,jl)
             zpsyy = psyy(ji,jj,jl)
             zpsxy = psxy(ji,jj,jl)
-            !                                !  Readjust moments remaining in the box.
-            zbt  =       zbet(ji-1,jj)
-            zbt1 = 1.0 - zbet(ji-1,jj)
             !
             zpsm  = zbt * zpsm + zbt1 * ( zpsm - zfm(ji-1,jj) )
             zps0  = zbt * zps0 + zbt1 * ( zps0 - zf0(ji-1,jj) )
@@ -162,8 +164,8 @@
             zpsxy =  zbt  * ( zalf * zfxy(ji-1,jj) + zalf1 * zpsxy            &
                &            + 3.0 * (- zalf1*zfy(ji-1,jj)  + zalf * zpsy ) )  &
                &            + zbt1 * zpsxy
-            zpsy  =  zbt  * ( zpsy  + zfy (ji-1,jj) ) + zbt1 * zpsy
-            zpsyy =  zbt  * ( zpsyy + zfyy(ji-1,jj) ) + zbt1 * zpsyy
+            zpsy  =  zbt * ( zpsy  + zfy (ji-1,jj) ) + zbt1 * zpsy
+            zpsyy =  zbt * ( zpsyy + zfyy(ji-1,jj) ) + zbt1 * zpsyy
 
             !                                !  Flux from i+1 to i IF u LT 0.
             zbt   =       zbet(ji,jj)
