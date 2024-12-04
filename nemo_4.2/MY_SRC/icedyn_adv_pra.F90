@@ -203,16 +203,16 @@ CONTAINS
          !                                                                  !--------------------------------------------!
          IF( MOD( (kt - 1) / nn_fsbc , 2 ) ==  MOD( (jt - 1) , 2 ) ) THEN   !==  odd ice time step:  adv_x then adv_y  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0ice , sxice , sxxice , syice , syyice , sxyice ) !--- ice volume
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0ice , sxice , sxxice , syice , syyice , sxyice )
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0snw , sxsn  , sxxsn  , sysn  , syysn  , sxysn  ) !--- snow volume
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0snw , sxsn  , sxxsn  , sysn  , syysn  , sxysn  )
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0smi , sxsal , sxxsal , sysal , syysal , sxysal ) !--- ice salinity
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0smi , sxsal , sxxsal , sysal , syysal , sxysal )
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0ai  , sxa   , sxxa   , sya   , syya   , sxya   ) !--- ice concentration
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0ai  , sxa   , sxxa   , sya   , syya   , sxya   )
-            CALL adv_x( zdt , zudy , 1._wp , zarea , z0oi  , sxage , sxxage , syage , syyage , sxyage ) !--- ice age
-            CALL adv_y( zdt , zvdx , 0._wp , zarea , z0oi  , sxage , sxxage , syage , syyage , sxyage )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0ice, sxice, sxxice, syice, syyice, sxyice ) !--- ice volume
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0ice, sxice, sxxice, syice, syyice, sxyice )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0snw, sxsn , sxxsn , sysn , syysn , sxysn  ) !--- snow volume
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0snw, sxsn , sxxsn , sysn , syysn , sxysn  )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0smi, sxsal, sxxsal, sysal, syysal, sxysal ) !--- ice salinity
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0smi, sxsal, sxxsal, sysal, syysal, sxysal )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0ai , sxa  , sxxa  , sya  , syya  , sxya   ) !--- ice concentration
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0ai , sxa  , sxxa  , sya  , syya  , sxya   )
+            CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0oi , sxage, sxxage, syage, syyage, sxyage ) !--- ice age
+            CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0oi , sxage, sxxage, syage, syyage, sxyage )
             !
             DO jk = 1, nlay_s                                                                           !--- snow heat content
                CALL adv_x( zdt, zudy, 1._wp, zarea, z0es (:,:,jk,:), sxc0(:,:,jk,:),   &
@@ -228,28 +228,28 @@ CONTAINS
             END DO
             !
             IF ( ln_pnd_LEV .OR. ln_pnd_TOPO ) THEN
-               CALL adv_x( zdt , zudy , 1._wp , zarea , z0ap , sxap , sxxap , syap , syyap , sxyap )    !--- melt pond fraction
-               CALL adv_y( zdt , zvdx , 0._wp , zarea , z0ap , sxap , sxxap , syap , syyap , sxyap )
-               CALL adv_x( zdt , zudy , 1._wp , zarea , z0vp , sxvp , sxxvp , syvp , syyvp , sxyvp )    !--- melt pond volume
-               CALL adv_y( zdt , zvdx , 0._wp , zarea , z0vp , sxvp , sxxvp , syvp , syyvp , sxyvp )
+               CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0ap, sxap, sxxap, syap, syyap, sxyap )    !--- melt pond fraction
+               CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0ap, sxap, sxxap, syap, syyap, sxyap )
+               CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0vp, sxvp, sxxvp, syvp, syyvp, sxyvp )    !--- melt pond volume
+               CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0vp, sxvp, sxxvp, syvp, syyvp, sxyvp )
                IF ( ln_pnd_lids ) THEN
-                  CALL adv_x( zdt , zudy , 1._wp , zarea , z0vl , sxvl , sxxvl , syvl , syyvl , sxyvl ) !--- melt pond lid volume
-                  CALL adv_y( zdt , zvdx , 0._wp , zarea , z0vl , sxvl , sxxvl , syvl , syyvl , sxyvl )
+                  CALL adv_x( zdt, zudy, 1._wp, z2d, zarea, z0vl, sxvl, sxxvl, syvl, syyvl, sxyvl ) !--- melt pond lid volume
+                  CALL adv_y( zdt, zvdx, 0._wp, z2d, zarea, z0vl, sxvl, sxxvl, syvl, syyvl, sxyvl )
                ENDIF
             ENDIF
             !                                                               !--------------------------------------------!
          ELSE                                                               !== even ice time step:  adv_y then adv_x  ==!
             !                                                               !--------------------------------------------!
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0ice , sxice , sxxice , syice , syyice , sxyice ) !--- ice volume
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0ice , sxice , sxxice , syice , syyice , sxyice )
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0snw , sxsn  , sxxsn  , sysn  , syysn  , sxysn  ) !--- snow volume
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0snw , sxsn  , sxxsn  , sysn  , syysn  , sxysn  )
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0smi , sxsal , sxxsal , sysal , syysal , sxysal ) !--- ice salinity
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0smi , sxsal , sxxsal , sysal , syysal , sxysal )
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0ai  , sxa   , sxxa   , sya   , syya   , sxya   ) !--- ice concentration
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0ai  , sxa   , sxxa   , sya   , syya   , sxya   )
-            CALL adv_y( zdt , zvdx , 1._wp , zarea , z0oi  , sxage , sxxage , syage , syyage , sxyage ) !--- ice age
-            CALL adv_x( zdt , zudy , 0._wp , zarea , z0oi  , sxage , sxxage , syage , syyage , sxyage )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0ice, sxice, sxxice, syice, syyice, sxyice ) !--- ice volume
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0ice, sxice, sxxice, syice, syyice, sxyice )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0snw, sxsn , sxxsn , sysn , syysn , sxysn  ) !--- snow volume
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0snw, sxsn , sxxsn , sysn , syysn , sxysn  )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0smi, sxsal, sxxsal, sysal, syysal, sxysal ) !--- ice salinity
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0smi, sxsal, sxxsal, sysal, syysal, sxysal )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0ai , sxa  , sxxa  , sya  , syya  , sxya   ) !--- ice concentration
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0ai , sxa  , sxxa  , sya  , syya  , sxya   )
+            CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0oi , sxage, sxxage, syage, syyage, sxyage ) !--- ice age
+            CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0oi , sxage, sxxage, syage, syyage, sxyage )
             DO jk = 1, nlay_s                                                                           !--- snow heat content
                CALL adv_y( zdt, zvdx, 1._wp, zarea, z0es (:,:,jk,:), sxc0(:,:,jk,:),   &
                   &                                 sxxc0(:,:,jk,:), syc0(:,:,jk,:), syyc0(:,:,jk,:), sxyc0(:,:,jk,:) )
@@ -263,13 +263,13 @@ CONTAINS
                   &                                 sxxe(:,:,jk,:), sye(:,:,jk,:), syye(:,:,jk,:), sxye(:,:,jk,:) )
             END DO
             IF ( ln_pnd_LEV .OR. ln_pnd_TOPO ) THEN
-               CALL adv_y( zdt , zvdx , 1._wp , zarea , z0ap , sxap , sxxap , syap , syyap , sxyap )    !--- melt pond fraction
-               CALL adv_x( zdt , zudy , 0._wp , zarea , z0ap , sxap , sxxap , syap , syyap , sxyap )
-               CALL adv_y( zdt , zvdx , 1._wp , zarea , z0vp , sxvp , sxxvp , syvp , syyvp , sxyvp )    !--- melt pond volume
-               CALL adv_x( zdt , zudy , 0._wp , zarea , z0vp , sxvp , sxxvp , syvp , syyvp , sxyvp )
+               CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0ap, sxap, sxxap, syap, syyap, sxyap )    !--- melt pond fraction
+               CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0ap, sxap, sxxap, syap, syyap, sxyap )
+               CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0vp, sxvp, sxxvp, syvp, syyvp, sxyvp )    !--- melt pond volume
+               CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0vp, sxvp, sxxvp, syvp, syyvp, sxyvp )
                IF ( ln_pnd_lids ) THEN
-                  CALL adv_y( zdt , zvdx , 1._wp , zarea , z0vl , sxvl , sxxvl , syvl , syyvl , sxyvl ) !--- melt pond lid volume
-                  CALL adv_x( zdt , zudy , 0._wp , zarea , z0vl , sxvl , sxxvl , syvl , syyvl , sxyvl )
+                  CALL adv_y( zdt, zvdx, 1._wp, z2d, zarea, z0vl, sxvl, sxxvl, syvl, syyvl, sxyvl ) !--- melt pond lid volume
+                  CALL adv_x( zdt, zudy, 0._wp, z2d, zarea, z0vl, sxvl, sxxvl, syvl, syyvl, sxyvl )
                ENDIF
             ENDIF
             !
@@ -368,7 +368,7 @@ CONTAINS
    END SUBROUTINE ice_dyn_adv_pra
 
 
-   SUBROUTINE adv_x( pdt, put, pcrh, psm, ps0, psx, psxx, psy, psyy, psxy )
+   SUBROUTINE adv_x( pdt, put, pcrh, pe1e2, psm, ps0, psx, psxx, psy, psyy, psxy )
       !!----------------------------------------------------------------------
       !!                **  routine adv_x  **
       !!
@@ -376,8 +376,9 @@ CONTAINS
       !!                variable on x axis
       !!----------------------------------------------------------------------
       REAL(wp)                  , INTENT(in   ) ::   pdt                ! the time step
-      REAL(wp)                  , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
       REAL(wp), DIMENSION(:,:)  , INTENT(in   ) ::   put                ! i-direction ice velocity at U-point [m/s]
+      REAL(wp)                  , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
+      REAL(wp), DIMENSION(:,:)  , INTENT(in   ) ::   pe1e2
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   psx , psy          ! 1st moments
@@ -419,7 +420,7 @@ CONTAINS
             zpsxy = psxy(ji,jj,jl)
 
             !  Initialize volumes of boxes  (=area if adv_x first called, =psm otherwise)
-            zpsm = MAX( pcrh * e1e2t(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20 )
+            zpsm = MAX( pcrh * pe1e2(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20 )
             !
             zslpmax = MAX( 0._wp, zps0 )
             zs1max  = 1.5 * zslpmax
@@ -567,8 +568,7 @@ CONTAINS
    END SUBROUTINE adv_x
 
 
-   SUBROUTINE adv_y( pdt, pvt , pcrh, psm , ps0 ,   &
-      &              psx, psxx, psy , psyy, psxy )
+   SUBROUTINE adv_y( pdt, pvt, pcrh, pe1e2, psm , ps0, psx, psxx, psy, psyy, psxy )
       !!---------------------------------------------------------------------
       !!                **  routine adv_y  **
       !!
@@ -576,8 +576,9 @@ CONTAINS
       !!                variable on y axis
       !!---------------------------------------------------------------------
       REAL(wp)                  , INTENT(in   ) ::   pdt                ! time step
-      REAL(wp)                  , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
       REAL(wp), DIMENSION(:,:)  , INTENT(in   ) ::   pvt                ! j-direction ice velocity at V-point [m/s]
+      REAL(wp)                  , INTENT(in   ) ::   pcrh               ! call adv_x then adv_y (=1) or the opposite (=0)
+      REAL(wp), DIMENSION(:,:,:), INTENT(in   ) ::   pe1e2
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   psm                ! area
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   ps0                ! field to be advected
       REAL(wp), DIMENSION(:,:,:), INTENT(inout) ::   psx , psy          ! 1st moments
@@ -620,7 +621,7 @@ CONTAINS
             zpsxy = psxy(ji,jj,jl)
             !
             !  Initialize volumes of boxes (=area if adv_y first called, =psm otherwise)
-            zpsm = MAX(  pcrh * e1e2t(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20  )
+            zpsm = MAX(  pcrh * pe1e2(ji,jj) + ( 1.0 - pcrh ) * zpsm , epsi20  )
             !
             zslpmax = MAX( 0._wp, zps0 )
             zs1max  = 1.5 * zslpmax
