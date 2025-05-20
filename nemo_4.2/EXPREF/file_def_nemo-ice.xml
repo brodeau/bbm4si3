@@ -44,7 +44,7 @@
       <!-- Traditional C-grid location: -->
       <field field_ref="icedmgt"     name="damage-t"    operation="instant" freq_op="6h" />
       <!-- <field field_ref="cncoeff_t"                      operation="instant" freq_op="6h" /> -->
-      <field field_ref="icedivt"     name="sidive-t"    operation="instant" freq_op="6h" valid_min="-0.5e-5" valid_max="0.5e-5" />
+      <field field_ref="icediv"     name="sidive-t"    operation="instant" freq_op="6h" valid_min="-0.5e-5" valid_max="0.5e-5" />
       <field field_ref="iceshrf"     name="sishear-f"   operation="instant" freq_op="6h" valid_min="-0.5e-5" valid_max="0.5e-5" />
       <field field_ref="icevorf"     name="sivort-f"    operation="instant" freq_op="6h" valid_min="-1.e-5"  valid_max="1.e-5"   />
       <field field_ref="iceshet"     name="simxshr-t"   operation="instant" freq_op="6h" valid_min="0."      valid_max="1.e-5" />
@@ -146,7 +146,7 @@
 
       <!-- rheology -->
       <!-- Traditional C-grid location: -->
-      <field field_ref="icedivt"     name="sidive-t"    operation="average" freq_op="1d" valid_min="-0.5e-5" valid_max="0.5e-5" />
+      <field field_ref="icediv"     name="sidive-t"    operation="average" freq_op="1d" valid_min="-0.5e-5" valid_max="0.5e-5" />
       <field field_ref="iceshrf"     name="sishear-f"   operation="average" freq_op="1d" valid_min="-0.5e-5" valid_max="0.5e-5" />
       <field field_ref="icevorf"     name="sivort-f"    operation="average" freq_op="1d" valid_min="-1.e-5" valid_max="1.e-5" />
       <field field_ref="iceshet"     name="simxshr-t"   operation="average" freq_op="1d" valid_min="0."     valid_max="1.e-5" />

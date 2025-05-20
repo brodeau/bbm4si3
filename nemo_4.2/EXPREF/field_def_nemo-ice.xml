@@ -209,7 +209,6 @@
       <field id="icestr"       long_name="Compressive sea ice strength"                            standard_name="compressive_strength_of_sea_ice"           unit="N/m"  />
       <!-- -->
       <field id="icediv"       long_name="Divergence of the sea-ice velocity field @T"             standard_name="divergence_of_sea_ice_velocity_t"          unit="s-1"  />
-      <field id="icedivt"      long_name="Divergence of the sea-ice velocity field @T"             standard_name="divergence_of_sea_ice_velocity_t"          unit="s-1"  />
       <field id="icedivf"      long_name="Divergence of the sea-ice velocity field @F"             standard_name="divergence_of_sea_ice_velocity_f"          unit="s-1"  />
       <!-- -->
       <field id="iceshrt"      long_name="Strain shear rate of sea-ice velocity field @T"          standard_name="shear_rate_of_sea_ice_velocity_t"          unit="s-1"  />
@@ -584,7 +583,6 @@
 
       <!-- rheology -->
       <field field_ref="icediv"           name="sidive"  />
-      <field field_ref="icedivt"          name="sidive"  />
       <field field_ref="icedivf"          name="sidive"  />
       <field field_ref="iceshe"           name="sishea"  />
       <field field_ref="iceshet"          name="sishea"  />
@@ -823,7 +821,6 @@
       <field field_ref="normstr"          name="sistresave"       operation="instant" />
       <field field_ref="sheastr"          name="sistremax"        operation="instant" />
       <field field_ref="icediv"           name="sidivvel"         operation="instant" />
-      <field field_ref="icedivt"          name="sidivvel"         operation="instant" />
       <field field_ref="icedivf"          name="sidivvel"         operation="instant" />
       <field field_ref="iceshe"           name="sishevel"         operation="instant" />
       <field field_ref="iceshet"          name="sishevel"         operation="instant" />

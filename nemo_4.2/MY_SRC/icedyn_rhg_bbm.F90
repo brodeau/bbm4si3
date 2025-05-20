@@ -654,7 +654,7 @@ CONTAINS
          &              r1_e1e2t, e2u, e1v, r1_e2u, r1_e1v, Xe1t2, Xe2t2, tmask(:,:,1), &
          &              ztmp1, ztmp2, ztmp3, lblnk=.TRUE., pdiv=pdivu_i, pmaxshr=pshear_i )
       ! --- divergence of velocity field @T:
-      IF( iom_use('icedivt') )  CALL iom_put( 'icedivt' , pdivu_i*xmsk_ice_t )
+      IF( iom_use('icediv') )  CALL iom_put( 'icediv' , pdivu_i*xmsk_ice_t )
       ! --- shear of velocity field @T:
       IF( iom_use('iceshrt') )  CALL iom_put( 'iceshrt' , ztmp3*xmsk_ice_t )
       ! --- MAXIMUM shear of velocity field @T:
