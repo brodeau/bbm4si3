@@ -814,7 +814,7 @@ CONTAINS
       IF( iom_use('icestr') )   CALL iom_put( 'icestr' , strength * zmsk00 )   ! strength
       IF( iom_use('icedlt') )   CALL iom_put( 'icedlt' , zdelta   * zmsk00 )   ! delta
       ! --- total deformation of velocity field @T:
-      IF( iom_use('icedeft') ) CALL iom_put( 'icedeft', SQRT( pshear_i*pshear_i + pdivu_i*pdivu_i ) )
+      IF( iom_use('icedef') ) CALL iom_put( 'icedef', SQRT( pshear_i*pshear_i + pdivu_i*pdivu_i ) )
 
       ! --- Stress tensor invariants (SIMIP diags) --- !
       IF( iom_use('normstr') .OR. iom_use('sheastr') ) THEN

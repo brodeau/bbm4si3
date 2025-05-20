@@ -211,15 +211,13 @@
       <field id="icediv"       long_name="Divergence of the sea-ice velocity field @T"             standard_name="divergence_of_sea_ice_velocity_t"          unit="s-1"  />
       <field id="icedivf"      long_name="Divergence of the sea-ice velocity field @F"             standard_name="divergence_of_sea_ice_velocity_f"          unit="s-1"  />
       <!-- -->
-      <field id="iceshrt"      long_name="Strain shear rate of sea-ice velocity field @T"          standard_name="shear_rate_of_sea_ice_velocity_t"          unit="s-1"  />
+      <field id="iceshr"      long_name="Strain shear rate of sea-ice velocity field @T"          standard_name="shear_rate_of_sea_ice_velocity_t"          unit="s-1"  />
       <field id="iceshrf"      long_name="Strain shear rate of sea-ice velocity field @F"          standard_name="shear_rate_of_sea_ice_velocity_f"          unit="s-1"  />
       <!-- -->
       <field id="iceshe"       long_name="Maximum shear of sea-ice velocity field @T"              standard_name="maximum_shear_of_sea_ice_velocity_t"       unit="s-1"  />
-      <field id="iceshet"      long_name="Maximum shear of sea-ice velocity field @T"              standard_name="maximum_shear_of_sea_ice_velocity_t"       unit="s-1"  />
       <field id="iceshef"      long_name="Maximum shear of sea-ice velocity field @F"              standard_name="maximum_shear_of_sea_ice_velocity_f"       unit="s-1"  />
       <!-- -->
       <field id="icedef"       long_name="Deformation rate of sea-ice velocity field @T"           standard_name="deformation_rate_of_sea_ice_velocity_t"    unit="s-1"  />
-      <field id="icedeft"      long_name="Deformation rate of sea-ice velocity field @T"           standard_name="deformation_rate_of_sea_ice_velocity_t"    unit="s-1"  />
       <field id="icedeff"      long_name="Deformation rate of sea-ice velocity field @F"           standard_name="deformation_rate_of_sea_ice_velocity_f"    unit="s-1"  />
       <field id="icevor"       long_name="Vorticity of sea-ice velocity field @F"                  standard_name="vorticity_of_sea_ice_velocity_f"           unit="s-1"  />
       <field id="icevorf"      long_name="Vorticity of sea-ice velocity field @F"                  standard_name="vorticity_of_sea_ice_velocity_f"           unit="s-1"  />
@@ -585,7 +583,6 @@
       <field field_ref="icediv"           name="sidive"  />
       <field field_ref="icedivf"          name="sidive"  />
       <field field_ref="iceshe"           name="sishea"  />
-      <field field_ref="iceshet"          name="sishea"  />
       <field field_ref="iceshef"          name="sishea"  />
       <field field_ref="icestr"           name="sistre"  />
       <field field_ref="normstr"          name="normstr" />
@@ -823,7 +820,6 @@
       <field field_ref="icediv"           name="sidivvel"         operation="instant" />
       <field field_ref="icedivf"          name="sidivvel"         operation="instant" />
       <field field_ref="iceshe"           name="sishevel"         operation="instant" />
-      <field field_ref="iceshet"          name="sishevel"         operation="instant" />
       <field field_ref="iceshef"          name="sishevel"         operation="instant" />
 
       <!-- sea ice fluxes across straits: 2D arrays to be post-processed  -->

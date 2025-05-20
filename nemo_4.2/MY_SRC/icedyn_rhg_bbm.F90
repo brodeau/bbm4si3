@@ -656,11 +656,11 @@ CONTAINS
       ! --- divergence of velocity field @T:
       IF( iom_use('icediv') )  CALL iom_put( 'icediv' , pdivu_i*xmsk_ice_t )
       ! --- shear of velocity field @T:
-      IF( iom_use('iceshrt') )  CALL iom_put( 'iceshrt' , ztmp3*xmsk_ice_t )
+      IF( iom_use('iceshr') )  CALL iom_put( 'iceshr' , ztmp3*xmsk_ice_t )
       ! --- MAXIMUM shear of velocity field @T:
-      IF( iom_use('iceshet') )  CALL iom_put( 'iceshet' , pshear_i*xmsk_ice_t )
+      IF( iom_use('iceshe') )  CALL iom_put( 'iceshe' , pshear_i*xmsk_ice_t )
       ! --- total deformation of velocity field @T:
-      IF( iom_use('icedeft') ) CALL iom_put( 'icedeft', SQRT( pshear_i*pshear_i + pdivu_i*pdivu_i )*xmsk_ice_t )
+      IF( iom_use('icedef') ) CALL iom_put( 'icedef', SQRT( pshear_i*pshear_i + pdivu_i*pdivu_i )*xmsk_ice_t )
 
       IF( iom_use('icedivf') .OR. iom_use('iceshrf') .OR. iom_use('iceshef') .OR. iom_use('icedeff') ) THEN
          CALL strain_rate( 'F', uVice, vUice, u_ice, v_ice, &
