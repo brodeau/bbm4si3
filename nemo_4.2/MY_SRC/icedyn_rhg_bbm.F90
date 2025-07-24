@@ -277,7 +277,7 @@ CONTAINS
    END SUBROUTINE ice_dyn_rhg_bbm_init
 
 
-   SUBROUTINE ice_dyn_rhg_bbm( kt, Kmm, pstress1_i, pstress2_i, pstress12_i, pshear_i, pdivu_i )
+   SUBROUTINE ice_dyn_rhg_bbm( kt, Kmm, pstress1_i, pstress2_i, pstress12_i, pshear_i, pdivu_i, pdelta_i )
       !!-------------------------------------------------------------------
       !!                 ***  SUBROUTINE ice_dyn_rhg_bbm  ***
       !!                             BBM-C-grid
@@ -319,7 +319,7 @@ CONTAINS
       INTEGER                 , INTENT(in ) ::   kt                                    ! time step
       INTEGER                 , INTENT(in ) ::   Kmm                                   ! ocean time level index
       REAL(wp), DIMENSION(:,:), INTENT(out) ::   pstress1_i, pstress2_i, pstress12_i   !
-      REAL(wp), DIMENSION(:,:), INTENT(out) ::   pshear_i  , pdivu_i
+      REAL(wp), DIMENSION(:,:), INTENT(out) ::   pshear_i  , pdivu_i   , pdelta_i
       !!
       INTEGER ::   ji, jj       ! dummy loop indices
       INTEGER ::   jter         ! local integers
