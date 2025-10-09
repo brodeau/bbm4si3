@@ -2,6 +2,8 @@
 
 # bbm4si3
 
+Branch `rdgrft_al`, implementation of `delta` for ridging/rafting with BBM by Laurent Brodeau.
+
 A set of new and modified NEMO Fortran sources required to allow the sea-ice
 component of NEMO, namely SI3, to use the new BBM brittle rheology
 of [Òlason *et al.*, 2023](https://doi.org/10.1029/2021MS002685) in place of the
