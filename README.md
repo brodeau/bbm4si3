@@ -2,7 +2,7 @@
 
 # bbm4si3
 
-Branch `rdgrft_al`, implementation of `delta` for ridging/rafting with BBM by Laurent Brodeau.
+Branch `rdgrft`, implementation of `delta` for ridging/rafting with BBM by Laurent Brodeau.
 
 A set of new and modified NEMO Fortran sources required to allow the sea-ice
 component of NEMO, namely SI3, to use the new BBM brittle rheology
