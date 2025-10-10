@@ -123,6 +123,8 @@
                                       !          this option 2 asks a lot of communications between cpu
    !                                  !
    ln_rhg_BBM       = .false.         !  BBM rheology
+      rn_ecc_bbm    = 2.               !    eccentricity of the elliptical yield curve ONLY used for the delta calculation in ridging/rafting
+
       ln_idealized  = .false.         !     if set to true: Coriolis and SSH tilt terms will be disregarded in the momentum eq.
       rn_Nref       = 1.E10           !     upper limit for compressive stress at the reference scale [Pa]
       rn_E0         = 5.9605E8        !     elasticity of undamaged ice [Pa]

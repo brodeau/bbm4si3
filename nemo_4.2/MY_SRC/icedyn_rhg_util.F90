@@ -517,7 +517,7 @@ CONTAINS
 
    SUBROUTINE strain_rate( cgt, pU, pV, pUd, pVd, p1_e1e2, pe2X, pe1Y, p1_e2X, p1_e1Y, pe1e1, pe2e2, &
       &                    pmask, pdudx, pdvdy, pshr,                                                &
-      &                    lblnk, pdudy, pdvdx, pdiv, pmaxshr )
+      &                    lblnk, pdudy, pdvdx, pdiv, pmaxshr, pdelta )
       !!
       !! Computes the 3 elements of the strain rate tensor, e11, e22 & e12, at either T- or F-points
       !!
@@ -535,9 +535,10 @@ CONTAINS
       REAL(wp), DIMENSION(:,:), INTENT(out) :: pdudx, pdvdy, pshr  ! e11, e22 & e12 @ `cgt` points                   [1/s]
       !!
       LOGICAL , OPTIONAL,                 INTENT(in)  :: lblnk
-      REAL(wp), OPTIONAL, DIMENSION(:,:), INTENT(out) :: pdudy, pdvdx, pdiv, pmaxshr ! @ `cgt` points                [1/s]
+      REAL(wp), OPTIONAL, DIMENSION(:,:), INTENT(out) :: pdudy, pdvdx, pdiv, pmaxshr, pdelta ! @ `cgt` points                [1/s]
       !!
-      LOGICAL  :: l_b_lnk=.FALSE., l_rtrn_dudy, l_rtrn_dvdx, l_rtrn_div, l_rtrn_maxshr
+      LOGICAL  :: l_b_lnk=.FALSE., l_rtrn_dudy, l_rtrn_dvdx, l_rtrn_div, l_rtrn_maxshr, l_rtrn_delta
+      REAL(wp) :: zdiv2, zdt2, zds, zds2, zecc_bbm2, z1_ecc_bbm2
       REAL(wp) :: zE1, zE2, zS1, zS2, z1_e1e2, zzf, ze2e2, ze1e1, zmask
       INTEGER  :: ip, im, jp, jm, ji, jj, k1, k2
       !!
@@ -547,6 +548,11 @@ CONTAINS
       l_rtrn_dvdx = PRESENT( pdvdx )
       l_rtrn_div  = PRESENT(  pdiv )
       l_rtrn_maxshr = PRESENT( pmaxshr )
+      l_rtrn_delta = PRESENT( pdelta )
+      IF (l_rtrn_delta) THEN
+         zecc_bbm2   = rn_ecc_bbm * rn_ecc_bbm
+         z1_ecc_bbm2 = 1._wp / zecc_bbm2
+      ENDIF
 
       IF ( cgt == 'T' ) THEN
          !! In T-centric cell: dU/dX @ T-point = (U(i,j) - U(i-1,j))/dx == (U(i+ip,j) - U(i+im,j))/dx
@@ -605,6 +611,14 @@ CONTAINS
                pmaxshr(ji,jj)  = SQRT( zE2*zE2 + zzf*zzf )
             ENDIF
 
+            IF (l_rtrn_delta) THEN
+               zdiv2 = zE1 * zE1
+               zdt2 = zE2 * zE2
+               zds = zS1 + zS2
+               zds2 = zds * zds
+               pdelta(ji,jj) = SQRT(zdiv2 + z1_ecc_bbm2 * ( zdt2 + zds2 ) )
+            ENDIF
+
       END_2D
 
       IF( l_b_lnk ) THEN
@@ -614,6 +628,8 @@ CONTAINS
          IF(l_rtrn_dvdx ) CALL lbc_lnk( 'strain_rate@icedyn_adv', pdvdx,cgt,1. )
          IF( l_rtrn_div ) CALL lbc_lnk( 'strain_rate@icedyn_adv',  pdiv,cgt,1. )
          IF( l_rtrn_maxshr ) CALL lbc_lnk( 'strain_rate@icedyn_adv', pmaxshr,cgt,1. )
+         IF( l_rtrn_delta ) CALL lbc_lnk( 'strain_rate@icedyn_adv', pdelta,cgt,1. )
+
       ENDIF
 
    END SUBROUTINE strain_rate

@@ -95,7 +95,7 @@ CONTAINS
          !                             !-------------------------!
       CASE( np_rhgBBM )                ! Brittle Bingham Maxwell !
          !                             !-------------------------!
-         CALL ice_dyn_rhg_bbm( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i )
+         CALL ice_dyn_rhg_bbm( kt, Kmm, stress1_i, stress2_i, stress12_i, shear_i, divu_i, delta_i )
          !
       END SELECT
       !
@@ -130,11 +130,11 @@ CONTAINS
       !!-------------------------------------------------------------------
       INTEGER ::   ios, ioptio   ! Local integer output status for namelist read
       !!
-      NAMELIST/namdyn_rhg/  ln_rhg_EVP, ln_aEVP, ln_rhg_EAP, rn_creepl, rn_ecc , nn_nevp, rn_relast, nn_rhg_chkcvg, &  !-- evp
-         &                  ln_rhg_BBM, ln_idealized, rn_Nref, rn_E0, rn_eta0, rn_P0, rn_kth, nn_nbbm, nn_d_adv,    &  !-- bbm
-         &                  rn_crndg, ln_boost_CN_coast, rn_max_CN_coast, ln_boost_CN_high_dmg, rn_max_CN_dmg,      &  !-- bbm
-         &                  rn_dmg_max, rn_C0, rn_alrlx, rn_btrlx, rn_c_ref, rn_l_ref, ln_tame_ini_ws, rn_half_tame,&  !-- bbm
-         &                  ln_rhg_VP, nn_vp_nout, nn_vp_ninn, nn_vp_chkcvg                                            !-- vp
+      NAMELIST/namdyn_rhg/  ln_rhg_EVP, ln_aEVP, ln_rhg_EAP, rn_creepl, rn_ecc , nn_nevp, rn_relast, nn_rhg_chkcvg,          &  !-- evp
+         &                  ln_rhg_BBM, rn_ecc_bbm, ln_idealized, rn_Nref, rn_E0, rn_eta0, rn_P0, rn_kth, nn_nbbm, nn_d_adv, &  !-- bbm
+         &                  rn_crndg, ln_boost_CN_coast, rn_max_CN_coast, ln_boost_CN_high_dmg, rn_max_CN_dmg,               &  !-- bbm
+         &                  rn_dmg_max, rn_C0, rn_alrlx, rn_btrlx, rn_c_ref, rn_l_ref, ln_tame_ini_ws, rn_half_tame,         &  !-- bbm
+         &                  ln_rhg_VP, nn_vp_nout, nn_vp_ninn, nn_vp_chkcvg                                                     !-- vp
       !!-------------------------------------------------------------------
       !
       READ  ( numnam_ice_ref, namdyn_rhg, IOSTAT = ios, ERR = 901)
@@ -172,6 +172,7 @@ CONTAINS
             WRITE(numout,*) '         elasticity of undamaged ice [Pa]                  rn_E0         = ', rn_E0  !#bbm
             WRITE(numout,*) '         viscosity of undamaged ice  [Pa.s]                rn_eta0       = ', rn_eta0  !#bbm
             WRITE(numout,*) '         compression factor "P" at play in "P_max"         rn_P0         = ', rn_P0  !#bbm
+            WRITE(numout,*) '         eccentricity for delta in ridging/rafting         rn_ecc_bbm    = ', rn_ecc_bbm  !#bbm
             WRITE(numout,*) '         healing constant for damage                       rn_kth        = ', rn_kth  !#bbm
             WRITE(numout,*) '         number of iterations for subcycling               nn_nbbm       = ', nn_nbbm !#bbm
             WRITE(numout,*) '         advection of damage and stresses @T & @F          nn_d_adv  = ', nn_d_adv !#bbm

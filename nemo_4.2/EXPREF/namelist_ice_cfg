@@ -35,8 +35,6 @@
 !------------------------------------------------------------------------------
 &namdyn         !   Ice dynamics
 !------------------------------------------------------------------------------
-   ln_dynALL        = .false.         !  dyn.: full ice dynamics                  (rheology + advection + ridging/rafting + correction)
-   ln_dynRHGADV     = .true.          !  dyn.: no ridge/raft & no corrections     (rheology + advection)
    rn_ishlat        =   2.            !  lbc : free slip (0) ; partial slip (0-2) ; no slip (2) ; strong slip (>2)
 /
 !------------------------------------------------------------------------------
@@ -49,6 +47,8 @@
    ln_rhg_EVP       = .false.         !  EVP rheology
    !                                  !
    ln_rhg_BBM       = .true.          !  BBM rheology
+      rn_ecc_bbm    = 2.               !    eccentricity of the elliptical yield curve ONLY used for the delta calculation in ridging/rafting
+
       rn_Nref       = 1.E10           !     upper limit for compressive stress at the reference scale [Pa]
       rn_E0         = 5.9605E8        !     elasticity of undamaged ice [Pa]
       rn_eta0       = 5.9605E15       !     viscosity of undamaged ice [Pa.s] (neXtSIM => rn_lamb0 = 1.E7 s)

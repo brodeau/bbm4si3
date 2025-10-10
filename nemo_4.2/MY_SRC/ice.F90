@@ -178,6 +178,7 @@ MODULE ice
    REAL(wp), PUBLIC ::   rn_P0            !: Compression factor "P" at play in P_max, in Eq.8 of [Olason al.2022], useless when `ln_MEB=.true.`
    REAL(wp), PUBLIC ::   rn_E0            !: Elasticity of undamaged ice [Pa]
    REAL(wp), PUBLIC ::   rn_eta0          !: Viscosity of Undamaged ice [Pa.s]
+   REAL(wp), PUBLIC ::   rn_ecc_bbm       !: eccentricity of the elliptical yield curve ONLY used for the delta calculation in ridging/rafting
    REAL(wp), PUBLIC ::   rn_kth           !: healing constant [Eq.30 of Olason et al.,2022]
    INTEGER , PUBLIC ::   nn_d_adv         !: advection of damage and stress tensor @T and @F
    !
