@@ -21,6 +21,10 @@
 !------------------------------------------------------------------------------
 &nampar         !   Generic parameters
 !------------------------------------------------------------------------------
+   jpl              =   5                ! 5 ice category!
+   ln_virtual_itd   =   .false.          !  virtual ITD mono-category parameterization (jpl=1 only)
+   !                                     !     i.e. enhanced thermal conductivity & virtual thin ice melting
+   ln_icethd        = .true.             !lolo!  ice thermo   (T) or not (F)
    rn_amax_n        =   0.999999         !  maximum tolerated ice concentration NH
    rn_amax_s        =   0.999999         !  maximum tolerated ice concentration SH
    !
@@ -35,9 +39,10 @@
 !------------------------------------------------------------------------------
 &namdyn         !   Ice dynamics
 !------------------------------------------------------------------------------
-   ln_dynALL        = .false.         !  dyn.: full ice dynamics                  (rheology + advection + ridging/rafting + correction)
-   ln_dynRHGADV     = .true.          !  dyn.: no ridge/raft & no corrections     (rheology + advection)
-   rn_ishlat        =   2.            !  lbc : free slip (0) ; partial slip (0-2) ; no slip (2) ; strong slip (>2)
+ln_dynALL        = .true.          !  dyn.: full ice dynamics                  (rheology + advection + ridging/rafting + correction)
+ln_dynRHGADV     = .false.         !  dyn.: no ridge/raft & no corrections     (rheology + advection)
+!                                  !
+rn_ishlat        =   2.            !  lbc : free slip (0) ; partial slip (0-2) ; no slip (2) ; strong slip (>2)
 /
 !------------------------------------------------------------------------------
 &namdyn_rdgrft  !   Ice ridging/rafting
@@ -49,6 +54,7 @@
    ln_rhg_EVP       = .false.         !  EVP rheology
    !                                  !
    ln_rhg_BBM       = .true.          !  BBM rheology
+      ln_idealized  = .false.         !     if set to true: Coriolis and SSH tilt terms will be disregarded in the momentum eq.
       rn_Nref       = 1.E10           !     upper limit for compressive stress at the reference scale [Pa]
       rn_E0         = 5.9605E8        !     elasticity of undamaged ice [Pa]
       rn_eta0       = 5.9605E15       !     viscosity of undamaged ice [Pa.s] (neXtSIM => rn_lamb0 = 1.E7 s)
@@ -59,7 +65,7 @@
       !                               !     => 15 * 3600s * 24 * 20K
       nn_nbbm       = 100             !     number of BBM subcycles
       !
-      nn_d_adv      = 4               !     advection of damage @T & @F at big time step
+      nn_d_adv      = 1   !lolo       !     advection of damage @T & @F at big time step
       !                               !        = 0 no advection at all!
       !                               !        = 1 advection of damage only at big time step
       !                               !        = 2 advection of damage + stress tensor components at big time step
@@ -81,10 +87,14 @@
 !------------------------------------------------------------------------------
 &namdyn_adv     !   Ice advection
 !------------------------------------------------------------------------------
+   ln_adv_Pra       = .true.          !  Advection scheme (Prather)
+   ln_adv_UMx       = .false.         !  Advection scheme (Ultimate-Macho)
+      nn_UMx        =   5             !     order of the scheme for UMx (1-5 ; 20=centered 2nd order)
 /
 !------------------------------------------------------------------------------
 &namsbc         !   Ice surface boundary conditions
 !------------------------------------------------------------------------------
+   rn_cio           =   5.2e-03       !  ice-ocean drag coefficient (-)
 /
 !------------------------------------------------------------------------------
 &namthd         !   Ice thermodynamics
@@ -114,7 +124,7 @@
 &namini         !   Ice initialization
 !------------------------------------------------------------------------------
    ln_iceini        = .true.          !  activate ice initialization (T) or not (F)
-   nn_iceini_file   = 0      !     0 = Initialise sea ice based on SSTs
+   nn_iceini_file   = 1               !     0 = Initialise sea ice based on SSTs
                                       !     1 = Initialise sea ice from single category netcdf file
                                       !     2 = Initialise sea ice from multi category restart file
    rn_thres_sst     =   2.0           !  max temp. above Tfreeze with initial ice = (sst - tfreeze)
@@ -127,15 +137,15 @@
    ! -- for nn_iceini_file = 1
    !       !  file name       ! frequency (hours) !  variable   ! time interp.!  clim  ! 'yearly'/ ! weights filename ! rotation ! land/sea mask !
    !       !                  !  (if <0  months)  !    name     !   (logical) !  (T/F) ! 'monthly' !                  ! pairing  !    filename   !
-   sn_hti = 'Ice_initialization_19970215.nc', -12. ,'hti'   ,  .false.  , .true., 'yearly'  , '' , '', ''
-   sn_hts = 'Ice_initialization_19970215.nc', -12. ,'hts'   ,  .false.  , .true., 'yearly'  , '' , '', ''
-   sn_ati = 'Ice_initialization_19970215.nc', -12. ,'ati'   ,  .false.  , .true., 'yearly'  , '' , '', ''
+   sn_hti = 'Ice_initialization_GLORYS2V4_19961101.nc', -12. ,'hti'   ,  .false.  , .true., 'yearly'  , '' , '', ''
+   sn_hts = 'Ice_initialization_GLORYS2V4_19961101.nc', -12. ,'hts'   ,  .false.  , .true., 'yearly'  , '' , '', ''
+   sn_ati = 'Ice_initialization_GLORYS2V4_19961101.nc', -12. ,'ati'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    sn_smi = 'NOT USED'                     , -12. ,'smi'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    sn_tmi = 'NOT USED'                     , -12. ,'tmi'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    sn_tsu = 'NOT USED'                     , -12. ,'tsu'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    sn_tms = 'NOT USED'                     , -12. ,'tms'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    ! BBM:
-   sn_dmg = 'Ice_initialization_19970215.nc', -12. ,'dmg'   ,  .false.  , .true., 'yearly'  , '' , '', ''
+   sn_dmg = 'Ice_initialization_GLORYS2V4_19961101.nc', -12. ,'dmg'   ,  .false.  , .true., 'yearly'  , '' , '', ''
    cn_dir='./'
 /
 !------------------------------------------------------------------------------

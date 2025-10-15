@@ -613,7 +613,8 @@ CONTAINS
                zdt2 = zE2 * zE2
                zds = zS1 + zS2
                zds2 = zds * zds
-               pdelta(ji,jj) = SQRT(zdiv2 + zdt2 + zds2) ! => A. Lambotte assumes `1/e^2=1` ie `e=1`
+               !pdelta(ji,jj) = SQRT(zdiv2 + zdt2 + zds2) ! =>  `1/e^2=1` ie `e=1`
+               pdelta(ji,jj) = SQRT( zdiv2 + 0.25_wp*(zdt2 + zds2) ) ! => `1/e^2=1/4` ie `e=2`
             ENDIF
 
       END_2D

@@ -661,7 +661,9 @@ CONTAINS
       IF( iom_use('iceshe') )  CALL iom_put( 'iceshe' , pshear_i*xmsk_ice_t )
       ! --- total deformation of velocity field @T:
       IF( iom_use('icedef') ) CALL iom_put( 'icedef', SQRT( pshear_i*pshear_i + pdivu_i*pdivu_i )*xmsk_ice_t )
-
+      ! --- delta @T:
+      IF( iom_use('icedlt') ) CALL iom_put( 'icedlt' , pdelta_i*xmsk_ice_t )
+      
       IF( iom_use('icedivf') .OR. iom_use('iceshrf') .OR. iom_use('iceshef') .OR. iom_use('icedeff') ) THEN
          CALL strain_rate( 'F', uVice, vUice, u_ice, v_ice, &
             &              r1_e1e2f, e2v, e1u, r1_e2v, r1_e1u, Xe1f2, Xe2f2, fmask(:,:,1), &
