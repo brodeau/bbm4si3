@@ -554,7 +554,7 @@ CONTAINS
 
 
       IF( l_rtrn_delta ) THEN
-         IF( lwp ) PRINT *, 'BLABLA: [strain_rate_all@icedyn_rhg_tools.F90]: for `delta` => using ecc =', REAL(rn_delta_ecc)
+         !IF( lwp ) PRINT *, 'BLABLA: [strain_rate_all@icedyn_rhg_tools.F90]: for `delta` => using ecc =', REAL(rn_delta_ecc)
          z1_ecc2 = 1._wp / ( rn_delta_ecc*rn_delta_ecc )
       ENDIF
 
