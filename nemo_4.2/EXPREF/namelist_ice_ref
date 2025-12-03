@@ -75,6 +75,13 @@
 !------------------------------------------------------------------------------
 &namdyn_rdgrft  !   Ice ridging/rafting
 !------------------------------------------------------------------------------
+   rn_delta_ecc     =   2.0           !  eccentricity of the elliptical yield curve to use when computing `delta`
+   !                                  !  via the use of the `strain_rate()` function defined inside `icedyn_rhg_util.F90`
+   !                                  !  ==> so will only be used when using BBM rheology
+   !                                  !  ==> if *EVP rheology is used, is is `rn_ecc` defined in namelist block `&namdyn_rhg`
+   !                                  !      that will actually be used
+   !                                  !  => overwritten with `rn_ecc` (&namdyn_rhg) when VP rheologies are used
+   !                                  !  `rn_delta_ecc = 1` implies that `delta` = `total deformation`
           ! -- ice_rdgrft_strength -- !
    ln_str_H79       = .true.          !  ice strength param.: Hibler_79   => P = pstar*<h>*exp(-c_rhg*A)
       rn_pstar      =   2.0e+04       !     ice strength thickness parameter [N/m2]

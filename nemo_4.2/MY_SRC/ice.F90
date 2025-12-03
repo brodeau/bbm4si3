@@ -149,6 +149,9 @@ MODULE ice
    REAL(wp), PUBLIC ::   rn_lf_tensile    !:    isotropic tensile strength
    !
    !                                     !!** ice-ridging/rafting namelist (namdyn_rdgrft) **
+   REAL(wp), PUBLIC ::   rn_delta_ecc     !: eccentricity of the elliptical yield curve to use when computing `delta`  
+   !                                      !:  => overwritten with `rn_ecc` (&namdyn_rhg) when VP rheologies are used   
+   !                                      !:  `rn_delta_ecc = 1` implies that `delta` = `total deformation`            
    LOGICAL,  PUBLIC ::   ln_str_H79       !: ice strength parameterization (Hibler79) (may be used in rheology)
    REAL(wp), PUBLIC ::   rn_crhg          !: determines changes in ice strength (also used for landfast param)
    REAL(wp), PUBLIC ::   rn_pstar         !: determines ice strength, Hibler JPO79 (may be used in rheology)

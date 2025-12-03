@@ -18,6 +18,7 @@ MODULE icedyn_rhg_util
    USE ice            ! sea-ice: variables
    USE lib_mpp
    USE lbclnk         ! lateral boundary conditions (or mpp links)
+   USE in_out_manager, ONLY : lwp
 
    IMPLICIT NONE
    PRIVATE
@@ -538,7 +539,7 @@ CONTAINS
       REAL(wp), OPTIONAL, DIMENSION(:,:), INTENT(out) :: pdudy, pdvdx, pdiv, pmaxshr, pdelta ! @ `cgt` points        [1/s]
       !!
       LOGICAL  :: l_b_lnk=.FALSE., l_rtrn_dudy, l_rtrn_dvdx, l_rtrn_div, l_rtrn_maxshr, l_rtrn_delta
-      REAL(wp) :: zdiv2, zdt2, zds, zds2
+      REAL(wp) :: zdiv2, zdt2, zds, zds2, z1_ecc2
       !!
       REAL(wp) :: zE1, zE2, zS1, zS2, z1_e1e2, zzf, ze2e2, ze1e1, zmask
       INTEGER  :: ip, im, jp, jm, ji, jj, k1, k2
@@ -551,6 +552,15 @@ CONTAINS
       l_rtrn_maxshr = PRESENT( pmaxshr )
       l_rtrn_delta = PRESENT( pdelta )
 
+
+      IF( l_rtrn_delta ) THEN
+         IF( lwp ) PRINT *, 'BLABLA: [strain_rate_all@icedyn_rhg_tools.F90]: for `delta` => using ecc =', REAL(rn_delta_ecc)
+         z1_ecc2 = 1._wp / ( rn_delta_ecc*rn_delta_ecc )
+      ENDIF
+
+
+
+      
       IF ( cgt == 'T' ) THEN
          !! In T-centric cell: dU/dX @ T-point = (U(i,j) - U(i-1,j))/dx == (U(i+ip,j) - U(i+im,j))/dx
          ip =  0
@@ -613,8 +623,7 @@ CONTAINS
                zdt2 = zE2 * zE2
                zds = zS1 + zS2
                zds2 = zds * zds
-               !pdelta(ji,jj) = SQRT(zdiv2 + zdt2 + zds2) ! =>  `1/e^2=1` ie `e=1`
-               pdelta(ji,jj) = SQRT( zdiv2 + 0.25_wp*(zdt2 + zds2) ) ! => `1/e^2=1/4` ie `e=2`
+               pdelta(ji,jj) = SQRT( zdiv2 + (zdt2 + zds2)*z1_ecc2 ) ! => `1/e^2=1/4` ie `e=2`
             ENDIF
 
       END_2D

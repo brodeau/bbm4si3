@@ -987,7 +987,8 @@ CONTAINS
       !!-------------------------------------------------------------------
       INTEGER :: ios, ioptio                ! Local integer output status for namelist read
       !!
-      NAMELIST/namdyn_rdgrft/ ln_str_H79, rn_pstar, rn_crhg, ln_str_R75, rn_pe_rdg, ln_str_CST, rn_str, ln_str_smooth, &
+      NAMELIST/namdyn_rdgrft/ rn_delta_ecc, ln_str_H79, rn_pstar, rn_crhg, ln_str_R75,   &
+         &                    rn_pe_rdg, ln_str_CST, rn_str, ln_str_smooth, &
          &                    ln_distf_lin, ln_distf_exp, rn_murdg, rn_csrdg,            &
          &                    ln_partf_lin, rn_gstar, ln_partf_exp, rn_astar,            &
          &                    ln_ridging, rn_hstar, rn_porordg, rn_fsnwrdg, rn_fpndrdg,  &
@@ -1005,6 +1006,7 @@ CONTAINS
          WRITE(numout,*) 'ice_dyn_rdgrft_init: ice parameters for ridging/rafting '
          WRITE(numout,*) '~~~~~~~~~~~~~~~~~~'
          WRITE(numout,*) '   Namelist namdyn_rdgrft:'
+         WRITE(numout,*) '      eccentricity of yield curve to compute `delta`           rn_delta_ecc = ', rn_delta_ecc
          WRITE(numout,*) '      ice strength parameterization Hibler (1979)              ln_str_H79   = ', ln_str_H79
          WRITE(numout,*) '            1st bulk-rheology parameter                        rn_pstar     = ', rn_pstar
          WRITE(numout,*) '            2nd bulk-rhelogy parameter                         rn_crhg      = ', rn_crhg
