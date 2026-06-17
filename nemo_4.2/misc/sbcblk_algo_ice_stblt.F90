@@ -5,12 +5,13 @@ MODULE sbcblk_algo_ice_stblt
    !!
    !!   What is the "STBLT" algorithm ?
    !!    => Given a constant value for the neutral coefficients C_D_N, C_E_N and C_H_N over sea-ice
-   !!       C_D, C_E and C_H consistent with the near-surface atmospheric stability
-   !!    ==> which is already a better option than using a constant value for C_D, C_E and C_H as in
+   !!       it will commpute the C_D, C_E and C_H consistent with the near-surface atmospheric stability
+   !!    ==> which is already a better approach than using a constant value for C_D, C_E and C_H as in
    !!        the default (and simplest) option in NEMO for instance.
-   !!    ==> the only room for XXX is the pick of the stability functions: we use those of Andreas 2005 for now...
+   !!    ==> the only room for improvement is the pick of the stability functions: we use those of Andreas 2005 for now...
    !!
-   !!   * bulk transfer coefficients C_D, C_E and C_H
+   !! What it computes:
+   !!   * bulk transfer coefficients C_D, C_E and C_H over sea-ice
    !!   * air temp. and spec. hum. adjusted from zt (usually 2m) to zu (usually 10m) if needed
    !!   * the "effective" bulk wind speed at zu: Ub (including gustiness contribution in unstable conditions)
    !!   => all these are used in bulk formulas in sbcblk.F90
